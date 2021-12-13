@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "war-of-the-ring-ai"
+version = "0.1.0"
+description = ""
+authors = ["Bradley Sherman <sirrus233@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+pytest-cov = "^3.0.0"
+pre-commit = "^2.16.0"
+pylint = "^2.12.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
