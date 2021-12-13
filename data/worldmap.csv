@@ -1,0 +1,105 @@
+Forlindon|Grey Havens|None|None|0|0|0
+Grey Havens|Forlindon,Ered Luin,Tower Hills,Harlindon|Elves|Stronghold|1|1|1
+Harlindon|Grey Havens,South Ered Luin|None|None|0|0|0
+Tower Hills|Grey Havens,Ered Luin,Evendim,The Shire,South Ered Luin|None|None|0|0|0
+Ered Luin|North Ered Luin,Evendim,Tower Hills,Grey Havens|Dwarves|Town|1|0|0
+North Ered Luin|Ered Luin,Evendim|Dwarves|None|0|0|0
+Evendim|North Ered Luin,Ered Luin,Tower Hills,The Shire,Buckland,North Downs,Arnor|None|None|0|0|0
+The Shire|Evendim,Tower Hills,South Ered Luin,Old Forest,Buckland|North|City|1|0|0
+South Ered Luin|Harlindon,Tower Hills,The Shire,Old Forest,Cardolan,Minhiriath|None|None|0|0|0
+Old Forest|The Shire,South Ered Luin,Buckland,Cardolan|None|None|0|0|0
+Buckland|The Shire,Evendim,North Downs,Bree,South Downs,Cardolan,Old Forest|North|None|0|0|0
+North Downs|Evendim,Arnor,Ettenmoors,Weather Hills,Bree,Buckland|North|None|0|1|0
+Bree|North Downs,Weather Hills,South Downs,Buckland|North|Town|1|0|0
+Minhiriath|South Ered Luin,Cardolan,Tharbad,Enedwaith|None|None|0|0|0
+Cardolan|Minhiriath,South Ered Luin,Old Forest,Buckland,South Downs,North Dunland,Tharbad|None|None|0|0|0
+South Downs|Cardolan,Buckland,Bree,Weather Hills,Trollshaws,Hollin,North Dunland|None|None|0|0|0
+Arnor|Evendim,North Downs,Ettenmoors,Angmar|None|None|0|0|0
+Ettenmoors|Angmar,Mount Gram,Trollshaws,Weather Hills,North Downs,Arnor|None|None|0|0|0
+Angmar|Arnor,Ettenmoors,Mount Gram|Sauron|City|0|0|0
+Mount Gram|Angmar,Ettenmoors,Mount Gundabad|Sauron|None|0|0|0
+Weather Hills|Ettenmoors,Trollshaws,South Downs,Bree,North Downs|None|None|0|0|0
+Trollshaws|Ettenmoors,Weather Hills,South Downs,Hollin,Fords of Bruinen,Rivendell|None|None|0|0|0
+Rivendell|Trollshaws,Fords of Bruinen|Elves|Stronghold|0|2|1
+Hollin|South Downs,Trollshaws,Fords of Bruinen,Moria,North Dunland|None|None|0|0|0
+North Dunland|Moria,Hollin,South Downs,Cardolan,Tharbad,South Dunland|Isengard|Town|1|0|0
+Tharbad|Minhiriath,Cardolan,North Dunland,South Dunland,Enedwaith|None|None|0|0|0
+South Dunland|North Dunland,Tharbad,Enedwaith,Gap of Rohan|Isengard|Town|1|0|0
+Enedwaith|Minhiriath,Tharbad,South Dunland,Gap of Rohan,Druwaith Iaur|None|None|0|0|0
+Fords of Bruinen|Rivendell,Trollshaws,Hollin,High Pass|None|None|0|0|0
+High Pass|Fords of Bruinen,Goblin's Gate|None|None|0|0|0
+Moria|Hollin,North Dunland,Dimrill Dale|Sauron|Stronghold|2|0|0
+Druwaith Iaur|Enedwaith,Gap of Rohan,Fords of Isen,Andrast|None|None|0|0|0
+Andrast|Druwaith Iaur,Anfalas|None|None|0|0|0
+Gap of Rohan|South Dunland,Enedwaith,Druwaith Iaur,Fords of Isen,Orthanc|Isengard|None|0|0|0
+Orthanc|Gap of Rohan,Fords of Isen|Isengard|Stronghold|4|1|0
+Fords of Isen|Fangorn,Westemnet,Helm's Deep,Druwaith Iaur,Gap of Rohan,Orthanc|Rohan|Fortification|2|0|1
+Helm's Deep|Fords of Isen,Westemnet|Rohan|Stronghold|1|0|0
+Westemnet|Fords of Isen,Helm's Deep,Edoras,Eastemnet,Fangorn,Folde|Rohan|Town|0|0|0
+Fangorn|Parth Celebrant,Eastemnet,Westemnet,Fords of Isen|None|None|0|0|0
+Goblin's Gate|High Pass,Old Ford|None|None|0|0|0
+Mount Gundabad|Mount Gram,Eagle's Eyrie|Sauron|Stronghold|2|0|0
+Eagle's Eyrie|Mount Gundabad,Carrock,Old Ford|None|None|0|0|0
+Old Ford|Eagle's Eyrie,Carrock,Rhosgobel,Gladden Fields,Goblin's Gate|None|None|0|0|0
+Gladden Fields|Old Ford,Rhosgobel,North Anduin Vale,Dimrill Dale|None|None|0|0|0
+Dimrill Dale|Gladden Fields,North Anduin Vale,South Anduin Vale,Parth Celebrant,Lorien,Moria|None|None|0|0|0
+Lorien|Dimrill Dale,Parth Celebrant|Elves|Stronghold|1|2|1
+Parth Celebrant|Lorien,Dimrill Dale,South Anduin Vale,Western Brown Lands,Eastemnet,Fangorn|None|None|0|0|0
+Folde|Edoras,Westemnet,Eastemnet,Druadan Forest|Rohan|Town|0|0|0
+Edoras|Westemnet,Folde|Rohan|City|1|1|0
+Eastemnet|Parth Celebrant,Fangorn,Westemnet,Folde,Druadan Forest,Western Emyn Muil,Western Brown Lands|Rohan|None|0|0|0
+Anfalas|Erech,Dol Amroth,Andrast|Gondor|None|0|0|0
+Erech|Anfalas,Dol Amroth,Lamedon|Gondor|None|0|0|0
+Dol Amroth|Anfalas,Erech,Lamedon|Gondor|Stronghold|3|0|0
+Lamedon|Erech,Dol Amroth,Pelargir|Gondor|Town|0|0|0
+Pelargir|Lamedon,Lossarnach,Osgiliath,West Harondor|Gondor|City|1|0|0
+Lossarnach|Pelargir,Osgiliath,Minas Tirith|Gondor|Town|0|0|0
+Minas Tirith|Druadan Forest,Osgiliath,Lossarnach|Gondor|Stronghold|3|1|1
+Druadan Forest|Folde,Eastemnet,Western Emyn Muil,Dead Marshes,Osgiliath,Minas Tirith|Gondor|None|0|0|0
+Osgiliath|Druadan Forest,Minas Tirith,Lossarnach,Pelargir,West Harondor,South Ithilien,North Ithilien,Dead Marshes|None|Fortification|2|0|0
+Umbar|West Harondor,Near Harad|S&E|Stronghold|3|0|0
+Near Harad|Khand,Far Harad,Umbar,West Harondor,East Harondor|S&E|Town|3|1|0
+Far Harad|Near Harad,Khand|S&E|City|3|1|0
+Khand|Near Harad,Far Harad|S&E|None|0|0|0
+West Harondor|Pelargir,Osgiliath,South Ithilien,East Harondor,Near Harad,Umbar|None|None|0|0|0
+East Harondor|Near Harad,West Harondor,South Ithilien|None|None|0|0|0
+South Ithilien|East Harondor,West Harondor,Osgiliath,North Ithilien,Minas Morgul|None|None|0|0|0
+Minas Morgul|South Ithilien,North Ithilien,Gorgoroth|Sauron|Stronghold|5|0|1
+Gorgoroth|Minas Morgul,Barad Dur,Nurn,Morannon|Sauron|None|3|0|0
+Nurn|Gorgoroth|Sauron|Town|2|0|0
+Barad Dur|Gorgoroth|Sauron|Stronghold|4|1|1
+Morannon|Gorgoroth,Dagorlad|Sauron|Stronghold|5|0|1
+Carrock|Eagle's Eyrie,Old Ford,Rhosgobel,Old Forest Road,Western Mirkwood,Northern Mirkwood|North|Town|1|0|0
+Rhosgobel|Carrock,Old Ford,Gladden Fields,North Anduin Vale,Narrows of the Forest,Old Forest Road|North|None|0|0|0
+Old Forest Road|Woodland Realm,Western Mirkwood,Carrock,Rhosgobel,Narrows of the Forest,Eastern Mirkwood,Northern Rhovanion,Dale|North|None|0|0|0
+Dale|Woodland Realm,Withered Heath,Erebor,Iron Hills,Vale of the Carnen,Northern Rhovanion,Old Forest Road|North|City|1|0|1
+Woodland Realm|Old Forest Road,Western Mirkwood,Northern Mirkwood,Withered Heath,Dale|Elves|Stronghold|1|1|1
+Northern Mirkwood|Carrock,Western Mirkwood,Woodland Realm,Withered Heath|None|None|0|0|0
+Withered Heath|Northern Mirkwood,Woodland Realm,Dale,Erebor|None|None|0|0|0
+Erebor|Withered Heath,Dale,Iron Hills|Dwarves|Stronghold|1|2|1
+Iron Hills|Erebor,Dale,Vale of the Carnen,East Rhun|Dwarves|Town|1|0|0
+Western Mirkwood|Northern Mirkwood,Woodland Realm,Old Forest Road,Carrock|None|None|0|0|0
+East Rhun|Iron Hills,Vale of the Carnen,North Rhun,South Rhun|S&E|None|0|0|0
+North Rhun|East Rhun,Vale of the Carnen,Vale of the Celduin,Northern Dorwinion|S&E|Town|2|0|0
+South Rhun|East Rhun,Southern Dorwinion,Ash Mountains|S&E|Town|3|1|0
+Narrows of the Forest|Old Forest Road,Eastern Mirkwood,Dol Guldur,North Anduin Vale,Rhosgobel|None|None|0|0|0
+Eastern Mirkwood|Old Forest Road,Northern Rhovanion,Southern Mirkwood,Dol Guldur,Narrows of the Forest|None|None|0|0|0
+North Anduin Vale|Rhosgobel,Gladden Fields,Dimrill Dale,South Anduin Vale,Dol Guldur,Narrows of the Forest|None|None|0|0|0
+South Anduin Vale|North Anduin Vale,Dimrill Dale,Parth Celebrant,Western Brown Lands,Dol Guldur|None|None|0|0|0
+Western Brown Lands|Dol Guldur,South Anduin Vale,Parth Celebrant,Eastemnet,Western Emyn Muil,Eastern Brown Lands|None|None|0|0|0
+Western Emyn Muil|Western Brown Lands,Eastemnet,Druadan Forest,Dead Marshes,Eastern Emyn Muil,Eastern Brown Lands|None|None|0|0|0
+Dead Marshes|Western Emyn Muil,Eastern Emyn Muil,Druadan Forest,North Ithilien,Osgiliath|None|None|0|0|0
+Noman-Lands|Southern Rhovanion,Eastern Brown Lands,Eastern Emyn Muil,Dagorlad,Ash Mountains,Southern Dorwinion|None|None|0|0|0
+Dol Guldur|Narrows of the Forest,North Anduin Vale,South Anduin Vale,Western Brown Lands,Eastern Brown Lands,Southern Mirkwood,Eastern Mirkwood|Sauron|Stronghold|5|1|1
+Southern Mirkwood|Eastern Mirkwood,Dol Guldur,Eastern Brown Lands,Southern Rhovanion,Northern Rhovanion|Sauron|None|0|0|0
+Northern Rhovanion|Dale,Vale of the Carnen,Vale of the Celduin,Southern Rhovanion,Southern Mirkwood,Eastern Mirkwood,Old Forest Road|None|None|0|0|0
+Southern Rhovanion|Northern Rhovanion,Vale of the Celduin,Northern Dorwinion,Southern Dorwinion,Noman-Lands,Eastern Brown Lands,Southern Mirkwood|None|None|0|0|0
+Eastern Brown Lands|Southern Mirkwood,Southern Rhovanion,Noman-Lands,Eastern Emyn Muil,Western Emyn Muil,Western Brown Lands,Dol Guldur|None|None|0|0|0
+Vale of the Carnen|Iron Hills,East Rhun,North Rhun,Vale of the Celduin,Northern Rhovanion,Dale|None|None|0|0|0
+Vale of the Celduin|Vale of the Carnen,North Rhun,Northern Dorwinion,Southern Rhovanion,Northern Rhovanion|None|None|0|0|0
+Eastern Emyn Muil|Eastern Brown Lands,Noman-Lands,Dagorlad,North Ithilien,Dead Marshes,Western Emyn Muil|None|None|0|0|0
+Northern Dorwinion|Vale of the Celduin,North Rhun,Southern Dorwinion,Southern Rhovanion|None|None|0|0|0
+Southern Dorwinion|Northern Dorwinion,South Rhun,Ash Mountains,Noman-Lands,Southern Rhovanion|None|None|0|0|0
+Ash Mountains|Southern Dorwinion,South Rhun,Dagorlad,Noman-Lands|None|None|0|0|0
+Dagorlad|Noman-Lands,Ash Mountains,Morannon,North Ithilien,Eastern Emyn Muil|None|None|0|0|0
+North Ithilien|Eastern Emyn Muil,Dagorlad,Minas Morgul,South Ithilien,Osgiliath,Dead Marshes|None|None|0|0|0

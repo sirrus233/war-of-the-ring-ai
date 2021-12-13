@@ -1,0 +1,105 @@
+Andrast
+Anfalas
+Angmar
+Arnor
+Ash Mountains
+Barad Dur
+Bree
+Buckland
+Cardolan
+Carrock
+Dagorlad
+Dale
+Dead Marshes
+Dimrill Dale
+Dol Amroth
+Dol Guldur
+Druadan Forest
+Druwaith Iaur
+Eagle's Eyrie
+East Harondor
+East Rhun
+Eastemnet
+Eastern Brown Lands
+Eastern Emyn Muil
+Eastern Mirkwood
+Edoras
+Enedwaith
+Erebor
+Erech
+Ered Luin
+Ettenmoors
+Evendim
+Fangorn
+Far Harad
+Folde
+Fords of Bruinen
+Fords of Isen
+Forlindon
+Gap of Rohan
+Gladden Fields
+Goblin's Gate
+Gorgoroth
+Grey Havens
+Harlindon
+Helm's Deep
+High Pass
+Hollin
+Iron Hills
+Khand
+Lamedon
+Lorien
+Lossarnach
+Minas Morgul
+Minas Tirith
+Minhiriath
+Morannon
+Moria
+Mount Gram
+Mount Gundabad
+Narrows of the Forest
+Near Harad
+Noman-Lands
+North Anduin Vale
+North Downs
+North Dunland
+North Ered Luin
+North Ithilien
+North Rhun
+Northern Dorwinion
+Northern Mirkwood
+Northern Rhovanion
+Nurn
+Old Ford
+Old Forest
+Old Forest Road
+Orthanc
+Osgiliath
+Parth Celebrant
+Pelargir
+Rhosgobel
+Rivendell
+South Anduin Vale
+South Downs
+South Dunland
+South Ered Luin
+South Ithilien
+South Rhun
+Southern Dorwinion
+Southern Mirkwood
+Southern Rhovanion
+Tharbad
+The Shire
+Tower Hills
+Trollshaws
+Umbar
+Vale of the Carnen
+Vale of the Celduin
+Weather Hills
+West Harondor
+Westemnet
+Western Brown Lands
+Western Emyn Muil
+Western Mirkwood
+Withered Heath
+Woodland Realm
