@@ -63,6 +63,19 @@ class Minion(Character):
 
 @dataclass
 class Fellowship:
+    companions: list[Companion]
     guide: Companion
     progress: int = 0
     corruption: int = 0
+
+
+@dataclass
+class ElvenRings:
+    free: int = 3
+    shadow: int = 0
+
+
+@dataclass
+class PoliticalStatus:
+    disposition: int
+    active: bool
