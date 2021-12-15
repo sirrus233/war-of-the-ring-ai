@@ -114,6 +114,31 @@ def init_army_map() -> dict[str, list[ArmyUnit]]:
     return armies
 
 
+def init_player_states() -> dict[Side, "PlayerState"]:
+    def build_player(side: Side) -> "PlayerState":
+        return PlayerState(
+            side,
+            init_deck(side, {CardCategory.CHARACTER}),
+            init_deck(side, {CardCategory.ARMY, CardCategory.MUSTER}),
+            4 if side == Side.FREE else 7,
+        )
+
+    return {side: build_player(side) for side in [Side.FREE, Side.SHADOW]}
+
+
+@dataclass
+class PlayerState:  # pylint: disable=too-many-instance-attributes
+    side: Side
+    character_deck: deque[Card]
+    strategy_deck: deque[Card]
+    dice_max: int
+
+    dice_count: int = 0
+    dice: list[DieResult] = field(default_factory=list)
+    hand: list[Card] = field(default_factory=list)
+    victory_points: int = 0
+
+
 @dataclass
 class GameState:  # pylint: disable=too-many-instance-attributes
     region_map: dict[str, Region] = field(default_factory=init_region_map)
@@ -123,36 +148,10 @@ class GameState:  # pylint: disable=too-many-instance-attributes
     elven_rings: ElvenRings = field(default_factory=ElvenRings)
     politics: dict[Nation, PoliticalStatus] = field(default_factory=init_politics)
 
-    free_character_deck: deque[Card] = field(
-        default_factory=lambda: init_deck(Side.FREE, {CardCategory.CHARACTER})
-    )
-    free_strategy_deck: deque[Card] = field(
-        default_factory=lambda: init_deck(
-            Side.FREE, {CardCategory.ARMY, CardCategory.MUSTER}
-        )
-    )
-    shadow_character_deck: deque[Card] = field(
-        default_factory=lambda: init_deck(Side.SHADOW, {CardCategory.CHARACTER})
-    )
-    shadow_strategy_deck: deque[Card] = field(
-        default_factory=lambda: init_deck(
-            Side.SHADOW, {CardCategory.ARMY, CardCategory.MUSTER}
-        )
-    )
-
-    free_dice_max: int = 4
-    free_dice_count: int = 4
-    free_dice: list[DieResult] = field(default_factory=list)
-
-    shadow_dice_max: int = 7
-    shadow_dice_count: int = 7
-    shadow_dice: list[DieResult] = field(default_factory=list)
+    players: dict[Side, PlayerState] = field(default_factory=init_player_states)
 
     hunt_box_eyes: int = 0
     hunt_box_character: int = 0
-
-    free_victory_points: int = 0
-    shadow_victory_points: int = 0
 
     def __post_init__(self) -> None:
         self.fellowship.location = self.region_map[INITIAL_FELLOWSHIP_LOCATION]
