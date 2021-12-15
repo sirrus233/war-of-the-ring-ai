@@ -1,25 +1,24 @@
 import pytest
 
-from war_of_the_ring_ai.game_objects import Nation, UnitType
+from war_of_the_ring_ai.game_objects import Nation, Side, UnitType
 from war_of_the_ring_ai.game_state import GameState
 
 
 def test_deck_sizes():
     state = GameState()
-    assert len(state.free_character_deck) == 24
-    assert len(state.free_strategy_deck) == 24
-    assert len(state.shadow_character_deck) == 24
-    assert len(state.shadow_strategy_deck) == 24
+    for player in state.players.values():
+        assert len(player.character_deck) == 24
+        assert len(player.strategy_deck) == 24
 
 
 def test_all_cards_exist_in_decks():
     state = GameState()
     all_cards = set()
     all_decks = [
-        state.free_character_deck,
-        state.free_strategy_deck,
-        state.shadow_character_deck,
-        state.shadow_strategy_deck,
+        state.players[Side.FREE].character_deck,
+        state.players[Side.FREE].strategy_deck,
+        state.players[Side.SHADOW].character_deck,
+        state.players[Side.SHADOW].strategy_deck,
     ]
     for deck in all_decks:
         for card in deck:
