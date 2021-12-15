@@ -23,3 +23,9 @@ disable = [
   "missing-class-docstring", 
   "missing-module-docstring",
 ]
+
+[tool.pylint.miscellaneous]
+notes = [
+  "FIXME",
+  "XXX",
+]

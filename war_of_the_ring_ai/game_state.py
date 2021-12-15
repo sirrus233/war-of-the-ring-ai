@@ -9,6 +9,7 @@ from war_of_the_ring_ai.game_objects import (
     CardCategory,
     CharacterID,
     Companion,
+    DieResult,
     ElvenRings,
     Fellowship,
     Nation,
@@ -117,9 +118,11 @@ def init_army_map() -> dict[str, list[ArmyUnit]]:
 class GameState:  # pylint: disable=too-many-instance-attributes
     region_map: dict[str, Region] = field(default_factory=init_region_map)
     army_map: dict[str, list[ArmyUnit]] = field(default_factory=init_army_map)
+
     fellowship: Fellowship = field(default_factory=init_fellowship)
     elven_rings: ElvenRings = field(default_factory=ElvenRings)
     politics: dict[Nation, PoliticalStatus] = field(default_factory=init_politics)
+
     free_character_deck: deque[Card] = field(
         default_factory=lambda: init_deck(Side.FREE, {CardCategory.CHARACTER})
     )
@@ -136,6 +139,20 @@ class GameState:  # pylint: disable=too-many-instance-attributes
             Side.SHADOW, {CardCategory.ARMY, CardCategory.MUSTER}
         )
     )
+
+    free_dice_max: int = 4
+    free_dice_count: int = 4
+    free_dice: list[DieResult] = field(default_factory=list)
+
+    shadow_dice_max: int = 7
+    shadow_dice_count: int = 7
+    shadow_dice: list[DieResult] = field(default_factory=list)
+
+    hunt_box_eyes: int = 0
+    hunt_box_character: int = 0
+
+    free_victory_points: int = 0
+    shadow_victory_points: int = 0
 
     def __post_init__(self) -> None:
         self.fellowship.location = self.region_map[INITIAL_FELLOWSHIP_LOCATION]
