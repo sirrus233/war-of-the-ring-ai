@@ -5,8 +5,8 @@ from war_of_the_ring_ai.game_state import GameState
 
 
 class GameManager:
-    def __init__(self) -> None:
-        self.state: GameState = GameState()
+    def __init__(self, state: GameState) -> None:
+        self.state: GameState = state
 
     def turn_flow(self) -> None:
         self.recover_and_draw_phase()

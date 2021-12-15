@@ -78,7 +78,7 @@ DIE = {
         DieResult.MUSTER,
         DieResult.HYBRID,
         DieResult.PALANTIR,
-        DieResult.WILL,
+        DieResult.EYE,
     ),
 }
 
