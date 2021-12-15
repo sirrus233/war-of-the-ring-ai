@@ -11,7 +11,7 @@ REGION_COUNT_BY_NATION = {
     "Gondor": 8,
     "Sauron": 11,
     "Isengard": 4,
-    "S&E": 7,
+    "Southron": 7,
 }
 
 SETTLEMENT_COUNT_BY_NATION = {
@@ -22,7 +22,7 @@ SETTLEMENT_COUNT_BY_NATION = {
     "Gondor": (2, 1, 2),
     "Sauron": (1, 1, 6),
     "Isengard": (2, 0, 1),
-    "S&E": (3, 1, 1),
+    "Southron": (3, 1, 1),
 }
 
 

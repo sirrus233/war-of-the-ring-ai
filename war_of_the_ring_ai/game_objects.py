@@ -1,6 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
+
+
+class Side(Enum):
+    FREE = 0
+    SHADOW = 1
 
 
 class Nation(Enum):
@@ -36,10 +41,52 @@ class CharacterID(Enum):
     MOUTH_OF_SAURON = 11
 
 
+class DieResult(Enum):
+    CHARACTER = 0
+    ARMY = 1
+    MUSTER = 2
+    HYBRID = 3
+    PALANTIR = 4
+    EYE = 5
+    WILL = 6
+
+
+class CardCategory(Enum):
+    CHARACTER = 0
+    ARMY = 1
+    MUSTER = 2
+
+
+class UnitType(Enum):
+    REGULAR = 0
+    ELITE = 1
+    LEADER = 2
+
+
+DIE = {
+    Side.FREE: (
+        DieResult.CHARACTER,
+        DieResult.CHARACTER,
+        DieResult.MUSTER,
+        DieResult.HYBRID,
+        DieResult.PALANTIR,
+        DieResult.WILL,
+    ),
+    Side.SHADOW: (
+        DieResult.CHARACTER,
+        DieResult.ARMY,
+        DieResult.MUSTER,
+        DieResult.HYBRID,
+        DieResult.PALANTIR,
+        DieResult.WILL,
+    ),
+}
+
+
 @dataclass
 class Region:
     name: str
-    neighbors: list["Region"]
+    neighbors: list["Region"] = field(repr=False)
     nation: Optional[Nation] = None
     settlement: Optional[Settlement] = None
 
@@ -65,6 +112,7 @@ class Minion(Character):
 class Fellowship:
     companions: list[Companion]
     guide: Companion
+    location: Optional[Region] = None
     progress: int = 0
     corruption: int = 0
 
@@ -79,3 +127,17 @@ class ElvenRings:
 class PoliticalStatus:
     disposition: int
     active: bool
+
+
+@dataclass
+class Card:
+    event_name: str
+    combat_name: str
+    side: Side
+    category: CardCategory
+
+
+@dataclass(frozen=True)
+class ArmyUnit:
+    type: UnitType
+    nation: Nation

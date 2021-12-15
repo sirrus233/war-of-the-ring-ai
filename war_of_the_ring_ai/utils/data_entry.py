@@ -15,7 +15,7 @@ NATIONS = {
     4: "Gondor",
     5: "Sauron",
     6: "Isengard",
-    7: "S&E",
+    7: "Southron",
 }
 
 SETTLEMENTS = {

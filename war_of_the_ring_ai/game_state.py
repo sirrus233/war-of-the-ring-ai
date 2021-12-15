@@ -1,13 +1,22 @@
 import csv
+from collections import deque
 from dataclasses import dataclass, field
+from random import shuffle
 
 from war_of_the_ring_ai.game_objects import (
+    ArmyUnit,
+    Card,
+    CardCategory,
     CharacterID,
     Companion,
     ElvenRings,
     Fellowship,
     Nation,
     PoliticalStatus,
+    Region,
+    Settlement,
+    Side,
+    UnitType,
 )
 
 INITIAL_COMPANION_IDS = [
@@ -21,6 +30,7 @@ INITIAL_COMPANION_IDS = [
 ]
 
 INITIAL_GUIDE_ID = CharacterID.GANDALF_GREY
+INITIAL_FELLOWSHIP_LOCATION = "Rivendell"
 
 
 def init_fellowship() -> Fellowship:
@@ -46,8 +56,86 @@ def init_politics() -> dict[Nation, PoliticalStatus]:
     return politics
 
 
+def init_deck(side: Side, categories: set[CardCategory]) -> deque[Card]:
+    deck: deque[Card] = deque()
+    with open("data/cards.csv", newline="", encoding="utf8") as csvfile:
+        reader = csv.reader(csvfile, delimiter="|")
+        for event, combat, side_str, category_str in reader:
+            if Side[side_str] == side and CardCategory[category_str] in categories:
+                card = Card(event, combat, Side[side_str], CardCategory[category_str])
+                deck.append(card)
+    shuffle(deck)
+    return deck
+
+
+def init_region_map() -> dict[str, Region]:
+    regions: dict[str, Region] = {}
+    neighbors: dict[str, list[str]] = {}
+    with open("data/worldmap.csv", newline="", encoding="utf8") as csvfile:
+        reader = csv.reader(csvfile, delimiter="|")
+        for name, neighbor_str, nation_str, settlement_str, _, _, _ in reader:
+            nation = None if nation_str == "None" else Nation[nation_str.upper()]
+            settlement = (
+                None if settlement_str == "None" else Settlement[settlement_str.upper()]
+            )
+            regions[name] = Region(name, [], nation, settlement)
+            neighbors[name] = neighbor_str.split(",")
+    for name, region in regions.items():
+        region.neighbors = [regions[neighbor] for neighbor in neighbors[name]]
+    return regions
+
+
+def init_army_map() -> dict[str, list[ArmyUnit]]:
+    armies: dict[str, list[ArmyUnit]] = {}
+    with open("data/worldmap.csv", newline="", encoding="utf8") as csvfile:
+        reader = csv.reader(csvfile, delimiter="|")
+        for name, _, nation_str, _, regulars_str, elites_str, leaders_str in reader:
+            regulars, elites, leaders = (
+                int(regulars_str),
+                int(elites_str),
+                int(leaders_str),
+            )
+            if regulars > 0 or elites > 0 or leaders > 0:
+                nation = (
+                    # This only occurs in Osgiliath - which has Gondor units.
+                    Nation.GONDOR
+                    if nation_str == "None"
+                    else Nation[nation_str.upper()]
+                )
+                army = []
+                for _ in range(int(regulars)):
+                    army.append(ArmyUnit(UnitType.REGULAR, nation))
+                for _ in range(int(elites)):
+                    army.append(ArmyUnit(UnitType.ELITE, nation))
+                for _ in range(int(leaders)):
+                    army.append(ArmyUnit(UnitType.LEADER, nation))
+                armies[name] = army
+    return armies
+
+
 @dataclass
-class GameState:
+class GameState:  # pylint: disable=too-many-instance-attributes
+    region_map: dict[str, Region] = field(default_factory=init_region_map)
+    army_map: dict[str, list[ArmyUnit]] = field(default_factory=init_army_map)
     fellowship: Fellowship = field(default_factory=init_fellowship)
     elven_rings: ElvenRings = field(default_factory=ElvenRings)
     politics: dict[Nation, PoliticalStatus] = field(default_factory=init_politics)
+    free_character_deck: deque[Card] = field(
+        default_factory=lambda: init_deck(Side.FREE, {CardCategory.CHARACTER})
+    )
+    free_strategy_deck: deque[Card] = field(
+        default_factory=lambda: init_deck(
+            Side.FREE, {CardCategory.ARMY, CardCategory.MUSTER}
+        )
+    )
+    shadow_character_deck: deque[Card] = field(
+        default_factory=lambda: init_deck(Side.SHADOW, {CardCategory.CHARACTER})
+    )
+    shadow_strategy_deck: deque[Card] = field(
+        default_factory=lambda: init_deck(
+            Side.SHADOW, {CardCategory.ARMY, CardCategory.MUSTER}
+        )
+    )
+
+    def __post_init__(self) -> None:
+        self.fellowship.location = self.region_map[INITIAL_FELLOWSHIP_LOCATION]

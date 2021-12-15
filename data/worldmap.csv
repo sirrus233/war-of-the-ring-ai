@@ -57,10 +57,10 @@ Lossarnach|Pelargir,Osgiliath,Minas Tirith|Gondor|Town|0|0|0
 Minas Tirith|Druadan Forest,Osgiliath,Lossarnach|Gondor|Stronghold|3|1|1
 Druadan Forest|Folde,Eastemnet,Western Emyn Muil,Dead Marshes,Osgiliath,Minas Tirith|Gondor|None|0|0|0
 Osgiliath|Druadan Forest,Minas Tirith,Lossarnach,Pelargir,West Harondor,South Ithilien,North Ithilien,Dead Marshes|None|Fortification|2|0|0
-Umbar|West Harondor,Near Harad|S&E|Stronghold|3|0|0
-Near Harad|Khand,Far Harad,Umbar,West Harondor,East Harondor|S&E|Town|3|1|0
-Far Harad|Near Harad,Khand|S&E|City|3|1|0
-Khand|Near Harad,Far Harad|S&E|None|0|0|0
+Umbar|West Harondor,Near Harad|Southron|Stronghold|3|0|0
+Near Harad|Khand,Far Harad,Umbar,West Harondor,East Harondor|Southron|Town|3|1|0
+Far Harad|Near Harad,Khand|Southron|City|3|1|0
+Khand|Near Harad,Far Harad|Southron|None|0|0|0
 West Harondor|Pelargir,Osgiliath,South Ithilien,East Harondor,Near Harad,Umbar|None|None|0|0|0
 East Harondor|Near Harad,West Harondor,South Ithilien|None|None|0|0|0
 South Ithilien|East Harondor,West Harondor,Osgiliath,North Ithilien,Minas Morgul|None|None|0|0|0
@@ -79,9 +79,9 @@ Withered Heath|Northern Mirkwood,Woodland Realm,Dale,Erebor|None|None|0|0|0
 Erebor|Withered Heath,Dale,Iron Hills|Dwarves|Stronghold|1|2|1
 Iron Hills|Erebor,Dale,Vale of the Carnen,East Rhun|Dwarves|Town|1|0|0
 Western Mirkwood|Northern Mirkwood,Woodland Realm,Old Forest Road,Carrock|None|None|0|0|0
-East Rhun|Iron Hills,Vale of the Carnen,North Rhun,South Rhun|S&E|None|0|0|0
-North Rhun|East Rhun,Vale of the Carnen,Vale of the Celduin,Northern Dorwinion|S&E|Town|2|0|0
-South Rhun|East Rhun,Southern Dorwinion,Ash Mountains|S&E|Town|3|1|0
+East Rhun|Iron Hills,Vale of the Carnen,North Rhun,South Rhun|Southron|None|0|0|0
+North Rhun|East Rhun,Vale of the Carnen,Vale of the Celduin,Northern Dorwinion|Southron|Town|2|0|0
+South Rhun|East Rhun,Southern Dorwinion,Ash Mountains|Southron|Town|3|1|0
 Narrows of the Forest|Old Forest Road,Eastern Mirkwood,Dol Guldur,North Anduin Vale,Rhosgobel|None|None|0|0|0
 Eastern Mirkwood|Old Forest Road,Northern Rhovanion,Southern Mirkwood,Dol Guldur,Narrows of the Forest|None|None|0|0|0
 North Anduin Vale|Rhosgobel,Gladden Fields,Dimrill Dale,South Anduin Vale,Dol Guldur,Narrows of the Forest|None|None|0|0|0
