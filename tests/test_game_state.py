@@ -1,3 +1,5 @@
+import pytest
+
 from war_of_the_ring_ai.game_objects import Nation, UnitType
 from war_of_the_ring_ai.game_state import GameState
 
@@ -25,25 +27,19 @@ def test_all_cards_exist_in_decks():
     assert len(all_cards) == 96
 
 
-def test_lorien_initial_army():
+@pytest.mark.parametrize(
+    "region, expected_nation, expected_regulars, expected_elites, expected_leaders",
+    [("Lorien", Nation.ELVES, 1, 2, 1), ("Osgiliath", Nation.GONDOR, 2, 0, 0)],
+)
+def test_initial_army(
+    region, expected_nation, expected_regulars, expected_elites, expected_leaders
+):
     state = GameState()
-    army = state.army_map["Lorien"]
+    army = state.army_map[region]
     regulars = sum(1 for unit in army if unit.type == UnitType.REGULAR)
     elites = sum(1 for unit in army if unit.type == UnitType.ELITE)
     leaders = sum(1 for unit in army if unit.type == UnitType.LEADER)
-    assert all(unit.nation == Nation.ELVES for unit in army)
-    assert regulars == 1
-    assert elites == 2
-    assert leaders == 1
-
-
-def test_osgiliath_initial_army():
-    state = GameState()
-    army = state.army_map["Osgiliath"]
-    regulars = sum(1 for unit in army if unit.type == UnitType.REGULAR)
-    elites = sum(1 for unit in army if unit.type == UnitType.ELITE)
-    leaders = sum(1 for unit in army if unit.type == UnitType.LEADER)
-    assert all(unit.nation == Nation.GONDOR for unit in army)
-    assert regulars == 2
-    assert elites == 0
-    assert leaders == 0
+    assert all(unit.nation == expected_nation for unit in army)
+    assert regulars == expected_regulars
+    assert elites == expected_elites
+    assert leaders == expected_leaders
