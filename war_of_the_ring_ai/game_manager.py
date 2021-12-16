@@ -73,8 +73,9 @@ class GameManager:
 
     def action_roll_phase(self) -> None:
         for player in self.state.players.values():
-            for _ in range(player.dice_count):
-                player.dice.append(random.choice(DIE[player.side]))
+            player.dice = [
+                random.choice(DIE[player.side]) for _ in range(player.dice_count)
+            ]
 
     def action_resolution_phase(self) -> Optional[Side]:
         pass
