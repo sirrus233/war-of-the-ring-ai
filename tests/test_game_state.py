@@ -42,3 +42,22 @@ def test_initial_army(
     assert regulars == expected_regulars
     assert elites == expected_elites
     assert leaders == expected_leaders
+
+
+def test_region_search():
+    state = GameState()
+    region = state.region_map["Grey Havens"]
+    distance = 2
+    expected_region_names = {
+        "Grey Havens",
+        "Forlindon",
+        "Harlindon",
+        "Tower Hills",
+        "Ered Luin",
+        "North Ered Luin",
+        "South Ered Luin",
+        "Evendim",
+        "The Shire",
+    }
+    actual_region_names = {region.name for region in region.reachable_regions(distance)}
+    assert expected_region_names == actual_region_names

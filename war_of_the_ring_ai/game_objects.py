@@ -63,6 +63,17 @@ class UnitType(Enum):
     LEADER = 2
 
 
+NATION_SIDE = {
+    Side.FREE: (
+        Nation.ELVES,
+        Nation.DWARVES,
+        Nation.NORTH,
+        Nation.GONDOR,
+        Nation.ROHAN,
+    ),
+    Side.SHADOW: (Nation.SAURON, Nation.ISENGARD, Nation.SOUTHRON),
+}
+
 DIE = {
     Side.FREE: (
         DieResult.CHARACTER,
@@ -89,6 +100,38 @@ class Region:
     neighbors: list["Region"] = field(repr=False)
     nation: Optional[Nation] = None
     settlement: Optional[Settlement] = None
+    is_unconquered: bool = field(default=True)
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+    def can_heal_fellowship(self) -> bool:
+        return (
+            self.nation in NATION_SIDE[Side.FREE]
+            and self.settlement in (Settlement.CITY, Settlement.STRONGHOLD)
+            and self.is_unconquered
+        )
+
+    def can_enter_mordor(self) -> bool:
+        return self.name in ("Morannon", "Minas Morgul")
+
+    def reachable_regions(self, distance: int) -> set["Region"]:
+        return self._reachable_region_search(distance, {self}, {self})
+
+    def _reachable_region_search(
+        self, distance: int, search: set["Region"], reached: set["Region"]
+    ) -> set["Region"]:
+        if distance == 0:
+            return reached
+
+        next_search = {
+            neighbor
+            for region in search
+            for neighbor in region.neighbors
+            if neighbor not in reached
+        }
+        reached |= next_search
+        return self._reachable_region_search(distance - 1, next_search, reached)
 
 
 @dataclass
@@ -113,6 +156,7 @@ class Fellowship:
     companions: list[Companion]
     guide: Companion
     location: Optional[Region] = None
+    revealed: bool = False
     progress: int = 0
     corruption: int = 0
 
