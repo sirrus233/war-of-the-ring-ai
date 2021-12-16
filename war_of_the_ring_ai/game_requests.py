@@ -2,12 +2,20 @@ import random
 from dataclasses import dataclass, field
 from typing import Any
 
-from war_of_the_ring_ai.game_objects import Companion, Region
+from war_of_the_ring_ai.game_objects import Card, Companion, Region
 
 
 @dataclass
 class Request:
     options: Any = field(init=False)
+
+
+@dataclass
+class Discard(Request):
+    hand: list[Card]
+
+    def __post_init__(self) -> None:
+        self.options: list[Card] = self.hand
 
 
 @dataclass

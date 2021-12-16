@@ -6,6 +6,7 @@ from war_of_the_ring_ai.game_requests import (
     ChangeGuide,
     DeclareFellowship,
     DeclareFellowshipLocation,
+    Discard,
     EnterMordor,
     HuntAllocation,
     handler,
@@ -34,6 +35,8 @@ class GameManager:
                 player.hand.append(player.character_deck.pop())
             if player.strategy_deck:
                 player.hand.append(player.strategy_deck.pop())
+            while len(player.hand) > 6:
+                player.hand.remove(handler(Discard(player.hand)))
             player.dice_count = player.dice_max
 
     def fellowship_phase(self) -> None:
