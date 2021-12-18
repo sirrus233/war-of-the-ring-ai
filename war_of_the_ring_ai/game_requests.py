@@ -1,4 +1,3 @@
-import random
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -7,7 +6,7 @@ from war_of_the_ring_ai.game_objects import Card, Companion, Region
 
 @dataclass
 class Request:
-    options: Any = field(init=False)
+    options: list[Any] = field(init=False)
 
 
 @dataclass
@@ -63,8 +62,7 @@ class HuntAllocation(Request):
         self.options: list[int] = list(range(self.min_allocation, max_allocation + 1))
 
 
-def handler(request: Request) -> Any:
-    # TODO Temporary handler
-    choice = random.choice(request.options)
-    print(f"{type(request).__name__}: {choice}")
-    return choice
+@dataclass
+class PassTurn(Request):
+    def __post_init__(self) -> None:
+        self.options: list[bool] = [True, False]

@@ -3,6 +3,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from random import shuffle
 
+from war_of_the_ring_ai.agent import Agent, random_strategy
 from war_of_the_ring_ai.game_objects import (
     ArmyUnit,
     Card,
@@ -117,6 +118,7 @@ def init_army_map() -> dict[str, list[ArmyUnit]]:
 def init_player_states() -> dict[Side, "PlayerState"]:
     def build_player(side: Side) -> "PlayerState":
         return PlayerState(
+            Agent(random_strategy),
             side,
             init_deck(side, {CardCategory.CHARACTER}),
             init_deck(side, {CardCategory.ARMY, CardCategory.MUSTER}),
@@ -128,6 +130,7 @@ def init_player_states() -> dict[Side, "PlayerState"]:
 
 @dataclass
 class PlayerState:  # pylint: disable=too-many-instance-attributes
+    agent: Agent
     side: Side
     character_deck: deque[Card]
     strategy_deck: deque[Card]

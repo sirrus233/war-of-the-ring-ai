@@ -9,7 +9,6 @@ from war_of_the_ring_ai.game_requests import (
     Discard,
     EnterMordor,
     HuntAllocation,
-    handler,
 )
 from war_of_the_ring_ai.game_state import GameState
 
@@ -36,19 +35,20 @@ class GameManager:
             if player.strategy_deck:
                 player.hand.append(player.strategy_deck.pop())
             while len(player.hand) > 6:
-                player.hand.remove(handler(Discard(player.hand)))
+                player.hand.remove(player.agent.response(Discard(player.hand)))
             player.dice_count = player.dice_max
 
     def fellowship_phase(self) -> None:
         fellowship = self.state.fellowship
+        agent = self.state.players[Side.FREE].agent
 
         # Change guide
-        fellowship.guide = handler(ChangeGuide(fellowship.companions))
+        fellowship.guide = agent.response(ChangeGuide(fellowship.companions))
 
         # Declare fellowship
         if fellowship.location and not fellowship.revealed:
-            if handler(DeclareFellowship()):
-                declared_region = handler(
+            if agent.response(DeclareFellowship()):
+                declared_region = agent.response(
                     DeclareFellowshipLocation(fellowship.location, fellowship.progress)
                 )
                 if declared_region.can_heal_fellowship():
@@ -58,12 +58,12 @@ class GameManager:
 
         # Enter Mordor
         if fellowship.location and fellowship.location.can_enter_mordor():
-            if handler(EnterMordor()):
+            if agent.response(EnterMordor()):
                 fellowship.location = None
                 fellowship.progress = 0
 
     def hunt_allocation_phase(self) -> None:
-        allocated_eyes = handler(
+        allocated_eyes = self.state.players[Side.SHADOW].agent.response(
             HuntAllocation(
                 min_allocation=0 if self.state.hunt_box_character == 0 else 1,
                 unused_dice=self.state.players[Side.SHADOW].dice_count,
