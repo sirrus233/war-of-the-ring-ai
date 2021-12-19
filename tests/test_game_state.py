@@ -35,10 +35,10 @@ def test_initial_army(
 ):
     state = GameState()
     army = state.army_map[region]
-    regulars = sum(1 for unit in army if unit.type == UnitType.REGULAR)
-    elites = sum(1 for unit in army if unit.type == UnitType.ELITE)
-    leaders = sum(1 for unit in army if unit.type == UnitType.LEADER)
-    assert all(unit.nation == expected_nation for unit in army)
+    regulars = sum(1 for unit in army.units if unit.type == UnitType.REGULAR)
+    elites = sum(1 for unit in army.units if unit.type == UnitType.ELITE)
+    leaders = sum(1 for unit in army.units if unit.type == UnitType.LEADER)
+    assert all(unit.nation == expected_nation for unit in army.units)
     assert regulars == expected_regulars
     assert elites == expected_elites
     assert leaders == expected_leaders
