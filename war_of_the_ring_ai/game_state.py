@@ -1,5 +1,6 @@
 import csv
 from collections import Counter, deque
+from copy import deepcopy
 from dataclasses import dataclass, field
 from random import shuffle
 
@@ -155,7 +156,7 @@ class GameState:  # pylint: disable=too-many-instance-attributes
     region_map: dict[str, Region] = field(default_factory=init_region_map)
     army_map: dict[str, Army] = field(default_factory=init_army_map)
     reinforcements: dict[Nation, list[int]] = field(
-        default_factory=INITIAL_REINFORCEMENTS.copy
+        default_factory=lambda: deepcopy(INITIAL_REINFORCEMENTS)
     )
 
     fellowship: Fellowship = field(default_factory=init_fellowship)
