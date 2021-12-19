@@ -63,6 +63,42 @@ class UnitType(Enum):
     LEADER = 2
 
 
+class Action(Enum):
+    # Any die can be thrown away without taking an action
+    SKIP = 0
+
+    # Palantir
+    DRAW_CHARACTER_EVENT = 1
+    DRAW_STRATEGY_EVENT = 2
+    PLAY_CHARACTER_EVENT = 3
+    PLAY_ARMY_EVENT = 4
+    PLAY_MUSTER_EVENT = 5
+
+    # Muster
+    DIPLOMACY = 6
+    MUSTER_ELITE = 7
+    MUSTER_REGULAR_REGULAR = 8
+    MUSTER_REGULAR_LEADER = 9
+    MUSTER_LEADER_LEADER = 10
+    MUSTER_SARUMAN = 11
+    MUSTER_WITCH_KING = 12
+    MUSTER_MOUTH_OF_SAURON = 13
+
+    # Army
+    MOVE_ARMY = 14
+    MOVE_ARMIES = 15
+    ATTACK = 16
+
+    # Character
+    LEADER_MOVE = 17
+    LEADER_ATTACK = 18
+    MOVE_FELLOWSHIP = 19
+    HIDE_FELLOWSHIP = 20
+    SEPARATE_COMPANIONS = 21
+    MOVE_COMPANIONS = 22
+    MOVE_MINIONS = 23
+
+
 NATION_SIDE = {
     Side.FREE: (
         Nation.ELVES,
