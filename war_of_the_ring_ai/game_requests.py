@@ -54,11 +54,11 @@ class EnterMordor(Request):
 @dataclass
 class HuntAllocation(Request):
     min_allocation: int
-    unused_dice: int
+    max_dice: int
     companions: int
 
     def __post_init__(self) -> None:
-        max_allocation = min(self.companions, self.unused_dice)
+        max_allocation = min(self.companions, self.max_dice)
         self.options: list[int] = list(range(self.min_allocation, max_allocation + 1))
 
 

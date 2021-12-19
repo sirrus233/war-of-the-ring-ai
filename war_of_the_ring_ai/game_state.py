@@ -1,5 +1,5 @@
 import csv
-from collections import deque
+from collections import Counter, deque
 from dataclasses import dataclass, field
 from random import shuffle
 
@@ -115,17 +115,14 @@ def init_army_map() -> dict[str, list[ArmyUnit]]:
     return armies
 
 
-def init_player_states() -> dict[Side, "PlayerState"]:
-    def build_player(side: Side) -> "PlayerState":
-        return PlayerState(
-            Agent(random_strategy),
-            side,
-            init_deck(side, {CardCategory.CHARACTER}),
-            init_deck(side, {CardCategory.ARMY, CardCategory.MUSTER}),
-            4 if side == Side.FREE else 7,
-        )
-
-    return {side: build_player(side) for side in [Side.FREE, Side.SHADOW]}
+def init_player(side: Side) -> "PlayerState":
+    return PlayerState(
+        Agent(random_strategy),
+        side,
+        init_deck(side, {CardCategory.CHARACTER}),
+        init_deck(side, {CardCategory.ARMY, CardCategory.MUSTER}),
+        4 if side == Side.FREE else 7,
+    )
 
 
 @dataclass
@@ -134,10 +131,9 @@ class PlayerState:  # pylint: disable=too-many-instance-attributes
     side: Side
     character_deck: deque[Card]
     strategy_deck: deque[Card]
-    dice_max: int
+    max_dice: int
 
-    dice_count: int = 0
-    dice: list[DieResult] = field(default_factory=list)
+    dice: Counter[DieResult] = field(default_factory=Counter)
     hand: list[Card] = field(default_factory=list)
     victory_points: int = 0
 
@@ -151,10 +147,13 @@ class GameState:  # pylint: disable=too-many-instance-attributes
     elven_rings: ElvenRings = field(default_factory=ElvenRings)
     politics: dict[Nation, PoliticalStatus] = field(default_factory=init_politics)
 
-    players: dict[Side, PlayerState] = field(default_factory=init_player_states)
+    free_player: PlayerState = field(default_factory=lambda: init_player(Side.FREE))
+    shadow_player: PlayerState = field(default_factory=lambda: init_player(Side.SHADOW))
+    players: tuple[PlayerState, PlayerState] = field(init=False)
 
     hunt_box_eyes: int = 0
     hunt_box_character: int = 0
 
     def __post_init__(self) -> None:
         self.fellowship.location = self.region_map[INITIAL_FELLOWSHIP_LOCATION]
+        self.players = self.free_player, self.shadow_player
