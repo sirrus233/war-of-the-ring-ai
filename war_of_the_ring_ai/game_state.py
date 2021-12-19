@@ -5,6 +5,7 @@ from random import shuffle
 
 from war_of_the_ring_ai.agent import Agent, random_strategy
 from war_of_the_ring_ai.game_objects import (
+    Army,
     ArmyUnit,
     Card,
     CardCategory,
@@ -33,6 +34,17 @@ INITIAL_COMPANION_IDS = [
 
 INITIAL_GUIDE_ID = CharacterID.GANDALF_GREY
 INITIAL_FELLOWSHIP_LOCATION = "Rivendell"
+
+INITIAL_REINFORCEMENTS = {
+    Nation.DWARVES: [2, 3, 3],
+    Nation.ELVES: [2, 4, 0],
+    Nation.GONDOR: [6, 4, 3],
+    Nation.NORTH: [6, 4, 3],
+    Nation.ROHAN: [6, 4, 3],
+    Nation.ISENGARD: [6, 5],
+    Nation.SAURON: [8, 4, 4],
+    Nation.SOUTHRON: [10, 3],
+}
 
 
 def init_fellowship() -> Fellowship:
@@ -87,8 +99,8 @@ def init_region_map() -> dict[str, Region]:
     return regions
 
 
-def init_army_map() -> dict[str, list[ArmyUnit]]:
-    armies: dict[str, list[ArmyUnit]] = {}
+def init_army_map() -> dict[str, Army]:
+    armies: dict[str, Army] = {}
     with open("data/worldmap.csv", newline="", encoding="utf8") as csvfile:
         reader = csv.reader(csvfile, delimiter="|")
         for name, _, nation_str, _, regulars_str, elites_str, leaders_str in reader:
@@ -104,13 +116,13 @@ def init_army_map() -> dict[str, list[ArmyUnit]]:
                     if nation_str == "None"
                     else Nation[nation_str.upper()]
                 )
-                army = []
+                army = Army()
                 for _ in range(int(regulars)):
-                    army.append(ArmyUnit(UnitType.REGULAR, nation))
+                    army.units.append(ArmyUnit(UnitType.REGULAR, nation))
                 for _ in range(int(elites)):
-                    army.append(ArmyUnit(UnitType.ELITE, nation))
+                    army.units.append(ArmyUnit(UnitType.ELITE, nation))
                 for _ in range(int(leaders)):
-                    army.append(ArmyUnit(UnitType.LEADER, nation))
+                    army.units.append(ArmyUnit(UnitType.LEADER, nation))
                 armies[name] = army
     return armies
 
@@ -141,7 +153,10 @@ class PlayerState:  # pylint: disable=too-many-instance-attributes
 @dataclass
 class GameState:  # pylint: disable=too-many-instance-attributes
     region_map: dict[str, Region] = field(default_factory=init_region_map)
-    army_map: dict[str, list[ArmyUnit]] = field(default_factory=init_army_map)
+    army_map: dict[str, Army] = field(default_factory=init_army_map)
+    reinforcements: dict[Nation, list[int]] = field(
+        default_factory=INITIAL_REINFORCEMENTS.copy
+    )
 
     fellowship: Fellowship = field(default_factory=init_fellowship)
     elven_rings: ElvenRings = field(default_factory=ElvenRings)

@@ -220,3 +220,9 @@ class Card:
 class ArmyUnit:
     type: UnitType
     nation: Nation
+
+
+@dataclass
+class Army:
+    units: list[ArmyUnit] = field(default_factory=list)
+    characters: list[Character] = field(default_factory=list)
