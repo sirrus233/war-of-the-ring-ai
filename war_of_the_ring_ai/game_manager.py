@@ -47,7 +47,8 @@ class GameManager:
         fellowship.guide = player.agent.response(ChangeGuide(fellowship.companions))
 
         # Declare fellowship
-        if fellowship.location and not fellowship.revealed:
+        if not fellowship.in_mordor() and not fellowship.revealed:
+            assert fellowship.location
             if player.agent.response(DeclareFellowship()):
                 declared_region = player.agent.response(
                     DeclareFellowshipLocation(fellowship.location, fellowship.progress)
@@ -58,10 +59,12 @@ class GameManager:
                 fellowship.progress = 0
 
         # Enter Mordor
-        if fellowship.location and fellowship.location.can_enter_mordor():
-            if player.agent.response(EnterMordor()):
-                fellowship.location = None
-                fellowship.progress = 0
+        if not fellowship.in_mordor():
+            assert fellowship.location
+            if fellowship.location.can_enter_mordor():
+                if player.agent.response(EnterMordor()):
+                    fellowship.location = None
+                    fellowship.progress = 0
 
     def hunt_allocation_phase(self) -> None:
         player = self.state.shadow_player
@@ -114,7 +117,7 @@ class GameManager:
             fellowship = self.state.fellowship
             if fellowship.corruption >= 12:
                 return Side.SHADOW
-            if not fellowship.location and fellowship.progress == 5:
+            if fellowship.in_mordor() and fellowship.progress == 5:
                 return Side.FREE
 
         return None

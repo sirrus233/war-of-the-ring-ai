@@ -195,6 +195,9 @@ class Fellowship:
     progress: int = 0
     corruption: int = 0
 
+    def in_mordor(self) -> bool:
+        return self.location is None
+
 
 @dataclass
 class ElvenRings:
