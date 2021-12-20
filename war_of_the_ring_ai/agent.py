@@ -16,6 +16,11 @@ class Agent:  # pylint: disable=too-few-public-methods
         self.strategy: Strategy = strategy
 
     def response(self, request: Request) -> Any:
+        request_name = type(request).__name__
+        if len(request.options) == 0:
+            raise ValueError(
+                f"Request {request_name} yielded no valid response options."
+            )
         response = self.strategy(request.options)
-        print(f"<{self.name}> {type(request).__name__}: {response}")
+        print(f"<{self.name}> {request_name}: {response}")
         return response
