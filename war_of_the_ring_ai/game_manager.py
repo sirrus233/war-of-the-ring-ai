@@ -357,6 +357,7 @@ class TurnManager:
             pass
 
         if action == Action.MOVE_FELLOWSHIP:
+            # TODO Reduce corruption with companions
             self.state.fellowship.progress += 1
 
             if self.state.fellowship.in_mordor():
@@ -417,6 +418,7 @@ class TurnManager:
                     self.state.fellowship.revealed = True
 
         if action == Action.HIDE_FELLOWSHIP:
+            # TODO Strider's Guide ability
             self.state.fellowship.revealed = False
 
         if action == Action.SEPARATE_COMPANIONS:
@@ -447,6 +449,7 @@ class TurnManager:
     def start_turn(self) -> Optional[Side]:
         while not self.is_turn_over():
             # TODO Elven ring option (CAN pass or use different die after using ring)
+            # TODO Auto-corruption from Mordor
 
             if self.choose_pass_if_able():
                 self.end_action()
