@@ -1,8 +1,8 @@
 import csv
+import random
 from collections import Counter, deque
 from copy import deepcopy
 from dataclasses import dataclass, field
-from random import shuffle
 from typing import Optional
 
 from war_of_the_ring_ai.agent import Agent, random_strategy
@@ -17,6 +17,9 @@ from war_of_the_ring_ai.game_objects import (
     DieResult,
     ElvenRings,
     Fellowship,
+    HuntPool,
+    HuntTile,
+    Minion,
     Nation,
     PoliticalStatus,
     Region,
@@ -45,20 +48,54 @@ INITIAL_REINFORCEMENTS = {
     Nation.GONDOR: [6, 4, 3],
     Nation.NORTH: [6, 4, 3],
     Nation.ROHAN: [6, 4, 3],
-    Nation.ISENGARD: [6, 5],
+    Nation.ISENGARD: [6, 5, 0],
     Nation.SAURON: [8, 4, 4],
-    Nation.SOUTHRON: [10, 3],
+    Nation.SOUTHRON: [10, 3, 0],
+}
+
+INITIAL_HUNT_TILES = [
+    HuntTile(3, False, None),
+    HuntTile(3, False, None),
+    HuntTile(3, False, None),
+    HuntTile(2, False, None),
+    HuntTile(2, False, None),
+    HuntTile(1, False, None),
+    HuntTile(1, False, None),
+    HuntTile(2, True, None),
+    HuntTile(1, True, None),
+    HuntTile(1, True, None),
+    HuntTile(0, True, None),
+    HuntTile(0, True, None),
+    HuntTile(100, True, None),
+    HuntTile(100, True, None),
+    HuntTile(100, True, None),
+    HuntTile(100, True, None),
+]
+
+ALL_COMPANIONS = {
+    CharacterID.GANDALF_GREY: Companion(CharacterID.GANDALF_GREY, 3, 1),
+    CharacterID.STRIDER: Companion(CharacterID.STRIDER, 3, 1),
+    CharacterID.GIMLI: Companion(CharacterID.GIMLI, 2, 1),
+    CharacterID.LEGOLAS: Companion(CharacterID.LEGOLAS, 2, 1),
+    CharacterID.BOROMIR: Companion(CharacterID.BOROMIR, 2, 1),
+    CharacterID.MERRY: Companion(CharacterID.MERRY, 1, 1),
+    CharacterID.PIPPIN: Companion(CharacterID.PIPPIN, 1, 1),
+    CharacterID.GANDALF_WHITE: Companion(CharacterID.GANDALF_WHITE, 3, 1),
+    CharacterID.ARAGORN: Companion(CharacterID.ARAGORN, 3, 2),
+}
+
+ALL_MINIONS = {
+    CharacterID.SARUMAN: Minion(CharacterID.SARUMAN, 0, 1),
+    CharacterID.WITCH_KING: Minion(CharacterID.WITCH_KING, -1, 2),
+    CharacterID.MOUTH_OF_SAURON: Minion(CharacterID.MOUTH_OF_SAURON, 3, 2),
 }
 
 
 def init_fellowship() -> Fellowship:
     initial_companions = {}
-    with open("data/characters.csv", newline="", encoding="utf8") as csvfile:
-        reader = csv.reader(csvfile, delimiter="|")
-        for name, level, leadership in reader:
-            if CharacterID[name] in INITIAL_COMPANION_IDS:
-                companion = Companion(CharacterID[name], int(level), int(leadership))
-                initial_companions[companion.name] = companion
+    for companion_id in INITIAL_COMPANION_IDS:
+        companion = ALL_COMPANIONS[companion_id]
+        initial_companions[companion.name] = companion
     guide = initial_companions[INITIAL_GUIDE_ID]
     return Fellowship(initial_companions, guide)
 
@@ -82,7 +119,7 @@ def init_deck(side: Side, categories: set[CardCategory]) -> deque[Card]:
             if Side[side_str] == side and CardCategory[category_str] in categories:
                 card = Card(event, combat, Side[side_str], CardCategory[category_str])
                 deck.append(card)
-    shuffle(deck)
+    random.shuffle(deck)
     return deck
 
 
@@ -178,6 +215,7 @@ class GameState:  # pylint: disable=too-many-instance-attributes
 
     hunt_box_eyes: int = 0
     hunt_box_character: int = 0
+    hunt_pool: HuntPool = field(default_factory=lambda: HuntPool(INITIAL_HUNT_TILES))
 
     characters_mustered: set[CharacterID] = field(default_factory=set)
 

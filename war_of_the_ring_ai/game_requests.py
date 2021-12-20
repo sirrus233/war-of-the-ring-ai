@@ -14,6 +14,7 @@ from war_of_the_ring_ai.game_objects import (
     PoliticalStatus,
     Region,
     RegionMap,
+    Settlement,
     Side,
 )
 
@@ -209,11 +210,13 @@ class MusterAction(Request):
         return available_regulars > 0, available_elites > 0, available_leaders > 0
 
     def can_muster_saruman(self) -> bool:
+        # TODO Account for muster location
         if CharacterID.SARUMAN in self.characters_mustered:
             return False
         return self.politics[Nation.ISENGARD].is_at_war()
 
     def can_muster_witch_king(self) -> bool:
+        # TODO Account for muster location
         if CharacterID.WITCH_KING in self.characters_mustered:
             return False
         return any(
@@ -223,6 +226,7 @@ class MusterAction(Request):
         )
 
     def can_muster_mouth_of_sauron(self) -> bool:
+        # TODO Account for muster location
         if CharacterID.MOUTH_OF_SAURON in self.characters_mustered:
             return False
         return self.fellowship.in_mordor() or all(
@@ -308,3 +312,88 @@ class WillAction(Request):
             for region in aragorn_regions
             if region.army
         )
+
+
+@dataclass
+class PlayCharacterEvent(Request):
+    hand: list[Card]
+
+    def __post_init__(self) -> None:
+        self.options: list[Card] = [
+            card for card in self.hand if card.category == CardCategory.CHARACTER
+        ]
+
+
+@dataclass
+class PlayArmyEvent(Request):
+    hand: list[Card]
+
+    def __post_init__(self) -> None:
+        self.options: list[Card] = [
+            card for card in self.hand if card.category == CardCategory.ARMY
+        ]
+
+
+@dataclass
+class PlayMusterEvent(Request):
+    hand: list[Card]
+
+    def __post_init__(self) -> None:
+        self.options: list[Card] = [
+            card for card in self.hand if card.category == CardCategory.MUSTER
+        ]
+
+
+@dataclass
+class Diplomacy(Request):
+    side: Side
+    politics: dict[Nation, PoliticalStatus]
+
+    def __post_init__(self) -> None:
+        self.options = [
+            nation
+            for nation in NATION_SIDE[self.side]
+            if self.politics[nation].can_advance()
+        ]
+
+
+@dataclass
+class MusterWitchKingArmy(Request):
+    regions: RegionMap
+
+    def __post_init__(self) -> None:
+        shadow_armies = [
+            region.army
+            for region in self.regions.with_army_units(Side.SHADOW)
+            if region.army is not None
+        ]
+        self.options = [
+            army
+            for army in shadow_armies
+            if any(unit.nation == Nation.SAURON for unit in army.units)
+        ]
+
+
+@dataclass
+class MusterMouthRegion(Request):
+    regions: RegionMap
+
+    def __post_init__(self) -> None:
+        self.options = [
+            region
+            for region in self.regions.with_nation(Nation.SAURON)
+            if region.settlement == Settlement.STRONGHOLD and not region.is_conquered
+        ]
+
+
+@dataclass
+class MusterGandalfWhiteRegion(Request):
+    regions: RegionMap
+
+    def __post_init__(self) -> None:
+        self.options = [
+            region
+            for region in self.regions.with_nation(Nation.ELVES)
+            if region.settlement == Settlement.STRONGHOLD and not region.is_conquered
+        ]
+        self.options.append(self.regions.with_name("Fangorn"))

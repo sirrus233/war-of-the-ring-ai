@@ -1,3 +1,4 @@
+import random
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable, Optional
@@ -365,3 +366,33 @@ class Army:
             character.leadership for character in self.characters
         )
         return self.leaders() + character_leadership
+
+
+@dataclass
+class HuntTile:
+    corruption: int
+    reveal: bool
+    side: Optional[Side]
+
+    def is_eye(self) -> bool:
+        return self.corruption == 100
+
+    def is_shelob(self) -> bool:
+        return self.corruption == 200
+
+
+@dataclass
+class HuntPool:
+    tiles: list[HuntTile]
+    reserve: list[HuntTile] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        random.shuffle(self.tiles)
+
+    def draw(self) -> HuntTile:
+        return self.tiles.pop()
+
+    def enter_mordor(self) -> None:
+        self.tiles.extend(self.reserve)
+        self.reserve = []
+        random.shuffle(self.tiles)
