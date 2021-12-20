@@ -11,10 +11,11 @@ def random_strategy(choices: list[Any]) -> Any:
 
 
 class Agent:  # pylint: disable=too-few-public-methods
-    def __init__(self, strategy: Strategy) -> None:
+    def __init__(self, name: str, strategy: Strategy) -> None:
+        self.name: str = name
         self.strategy: Strategy = strategy
 
     def response(self, request: Request) -> Any:
         response = self.strategy(request.options)
-        print(f"{type(request).__name__}: {response}")
+        print(f"<{self.name}> {type(request).__name__}: {response}")
         return response

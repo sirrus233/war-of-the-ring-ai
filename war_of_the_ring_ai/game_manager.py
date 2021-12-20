@@ -251,8 +251,8 @@ class TurnManager:
             else:
                 action_die = self.choose_action_die()
                 action = self.choose_action(action_die)
-                # TODO Take action
-                print(action)
+                if action == Action.MOVE_FELLOWSHIP:
+                    self.state.fellowship.progress += 1
                 self.end_action()
 
             if (winner := self.is_ring_victory()) is not None:

@@ -136,7 +136,7 @@ def init_army(
 
 def init_player(side: Side) -> "PlayerState":
     return PlayerState(
-        Agent(random_strategy),
+        Agent(side.name, random_strategy),
         side,
         init_deck(side, {CardCategory.CHARACTER}),
         init_deck(side, {CardCategory.ARMY, CardCategory.MUSTER}),
