@@ -94,23 +94,19 @@ class ChooseDie(Request):
 
 
 @dataclass
-class ChooseAction(Request):
-    def __post_init__(self) -> None:
-        self.options = [Action.SKIP]
-
-
-@dataclass
-class CharacterAction(ChooseAction):
+class CharacterAction(Request):
     side: Side
     fellowship: Fellowship
     regions: RegionMap
 
     def __post_init__(self) -> None:
-        friendly_armies_with_leadership = {
+        self.options: list[Action] = [Action.SKIP]
+
+        friendly_armies_with_leadership = [
             region.army
             for region in self.regions.with_army_units(self.side)
             if region.army is not None and region.army.leadership() > 0
-        }
+        ]
 
         if any(army.valid_moves() for army in friendly_armies_with_leadership):
             self.options.append(Action.LEADER_MOVE)
@@ -141,16 +137,18 @@ class CharacterAction(ChooseAction):
 
 
 @dataclass
-class ArmyAction(ChooseAction):
+class ArmyAction(Request):
     side: Side
     regions: RegionMap
 
     def __post_init__(self) -> None:
-        friendly_armies = {
+        self.options: list[Action] = [Action.SKIP]
+
+        friendly_armies = [
             region.army
             for region in self.regions.with_army_units(self.side)
             if region.army is not None
-        }
+        ]
 
         if any(army.valid_moves() for army in friendly_armies):
             self.options.append(Action.MOVE_ARMIES)
@@ -160,7 +158,7 @@ class ArmyAction(ChooseAction):
 
 
 @dataclass
-class MusterAction(ChooseAction):
+class MusterAction(Request):
     side: Side
     regions: RegionMap
     politics: dict[Nation, PoliticalStatus]
@@ -169,6 +167,8 @@ class MusterAction(ChooseAction):
     fellowship: Fellowship
 
     def __post_init__(self) -> None:
+        self.options: list[Action] = [Action.SKIP]
+
         if self.can_politic():
             self.options.append(Action.DIPLOMACY)
 
@@ -231,10 +231,23 @@ class MusterAction(ChooseAction):
 
 
 @dataclass
-class PalantirAction(ChooseAction):
+class HybridAction(Request):
+    army_action_request: ArmyAction
+    muster_action_request: MusterAction
+
+    def __post_init__(self) -> None:
+        self.options: list[Action] = [Action.SKIP]
+        self.options.extend(self.army_action_request.options)
+        self.options.extend(self.muster_action_request.options)
+
+
+@dataclass
+class PalantirAction(Request):
     player: "PlayerState"
 
     def __post_init__(self) -> None:
+        self.options: list[Action] = [Action.SKIP]
+
         if self.player.character_deck:
             self.options.append(Action.DRAW_CHARACTER_EVENT)
         if self.player.strategy_deck:
@@ -248,12 +261,22 @@ class PalantirAction(ChooseAction):
 
 
 @dataclass
-class WillAction(ChooseAction):
+class WillAction(Request):
     characters_mustered: set[CharacterID]
     companions: dict[CharacterID, Companion]
-    aragorn_regions: set[Region]
+    regions: RegionMap
+
+    character_action_request: CharacterAction
+    hybrid_action_request: HybridAction
+    palantir_action_request: PalantirAction
 
     def __post_init__(self) -> None:
+        self.options: list[Action] = [Action.SKIP]
+
+        self.options.extend(self.character_action_request.options)
+        self.options.extend(self.hybrid_action_request.options)
+        self.options.extend(self.palantir_action_request.options)
+
         if self.can_muster_gandalf():
             self.options.append(Action.MUSTER_GANDALF)
 
@@ -275,8 +298,13 @@ class WillAction(ChooseAction):
         )
 
     def can_muster_aragorn(self) -> bool:
+        aragorn_regions = {
+            self.regions.with_name("Dol Amroth"),
+            self.regions.with_name("Pelargir"),
+            self.regions.with_name("Minas Tirith"),
+        }
         return any(
             region.army.has_character(CharacterID.STRIDER)
-            for region in self.aragorn_regions
+            for region in aragorn_regions
             if region.army
         )

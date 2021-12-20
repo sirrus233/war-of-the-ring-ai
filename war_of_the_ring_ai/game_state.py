@@ -156,6 +156,10 @@ class PlayerState:  # pylint: disable=too-many-instance-attributes
     hand: list[Card] = field(default_factory=list)
     victory_points: int = 0
 
+    def dice_count(self) -> int:
+        # TODO This can be player.dice.total() when mypy supports python 3.10
+        return sum(self.dice.values())
+
 
 @dataclass
 class GameState:  # pylint: disable=too-many-instance-attributes
