@@ -34,7 +34,7 @@ def test_initial_army(
     region, expected_nation, expected_regulars, expected_elites, expected_leaders
 ):
     state = GameState()
-    army = state.army_map[region]
+    army = state.regions.with_name(region).army
     regulars = sum(1 for unit in army.units if unit.type == UnitType.REGULAR)
     elites = sum(1 for unit in army.units if unit.type == UnitType.ELITE)
     leaders = sum(1 for unit in army.units if unit.type == UnitType.LEADER)
@@ -46,7 +46,7 @@ def test_initial_army(
 
 def test_region_search():
     state = GameState()
-    region = state.region_map["Grey Havens"]
+    region = state.regions.with_name("Grey Havens")
     distance = 2
     expected_region_names = {
         "Grey Havens",

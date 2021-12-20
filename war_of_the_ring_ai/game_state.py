@@ -3,9 +3,11 @@ from collections import Counter, deque
 from copy import deepcopy
 from dataclasses import dataclass, field
 from random import shuffle
+from typing import Optional
 
 from war_of_the_ring_ai.agent import Agent, random_strategy
 from war_of_the_ring_ai.game_objects import (
+    NATION_SIDE,
     Army,
     ArmyUnit,
     Card,
@@ -18,6 +20,7 @@ from war_of_the_ring_ai.game_objects import (
     Nation,
     PoliticalStatus,
     Region,
+    RegionMap,
     Settlement,
     Side,
     UnitType,
@@ -49,14 +52,14 @@ INITIAL_REINFORCEMENTS = {
 
 
 def init_fellowship() -> Fellowship:
-    initial_companions = []
+    initial_companions = {}
     with open("data/characters.csv", newline="", encoding="utf8") as csvfile:
         reader = csv.reader(csvfile, delimiter="|")
         for name, level, leadership in reader:
             if CharacterID[name] in INITIAL_COMPANION_IDS:
                 companion = Companion(CharacterID[name], int(level), int(leadership))
-                initial_companions.append(companion)
-    guide = next(c for c in initial_companions if c.name == CharacterID.GANDALF_GREY)
+                initial_companions[companion.name] = companion
+    guide = initial_companions[INITIAL_GUIDE_ID]
     return Fellowship(initial_companions, guide)
 
 
@@ -83,49 +86,52 @@ def init_deck(side: Side, categories: set[CardCategory]) -> deque[Card]:
     return deck
 
 
-def init_region_map() -> dict[str, Region]:
-    regions: dict[str, Region] = {}
+def init_region_map() -> RegionMap:
+    regions: RegionMap = RegionMap()
     neighbors: dict[str, list[str]] = {}
     with open("data/worldmap.csv", newline="", encoding="utf8") as csvfile:
         reader = csv.reader(csvfile, delimiter="|")
-        for name, neighbor_str, nation_str, settlement_str, _, _, _ in reader:
+        for (
+            name,
+            neighbor_str,
+            nation_str,
+            settlement_str,
+            regulars_str,
+            elites_str,
+            leaders_str,
+        ) in reader:
             nation = None if nation_str == "None" else Nation[nation_str.upper()]
             settlement = (
                 None if settlement_str == "None" else Settlement[settlement_str.upper()]
             )
-            regions[name] = Region(name, [], nation, settlement)
+            region = Region(name, [], nation, settlement, army=None)
+            region.army = init_army(
+                int(regulars_str), int(elites_str), int(leaders_str), nation, region
+            )
             neighbors[name] = neighbor_str.split(",")
-    for name, region in regions.items():
-        region.neighbors = [regions[neighbor] for neighbor in neighbors[name]]
+            regions.insert(region)
+    for name, region in regions.regions_by_name.items():
+        region.neighbors = [regions.with_name(neighbor) for neighbor in neighbors[name]]
     return regions
 
 
-def init_army_map() -> dict[str, Army]:
-    armies: dict[str, Army] = {}
-    with open("data/worldmap.csv", newline="", encoding="utf8") as csvfile:
-        reader = csv.reader(csvfile, delimiter="|")
-        for name, _, nation_str, _, regulars_str, elites_str, leaders_str in reader:
-            regulars, elites, leaders = (
-                int(regulars_str),
-                int(elites_str),
-                int(leaders_str),
-            )
-            if regulars > 0 or elites > 0 or leaders > 0:
-                nation = (
-                    # This only occurs in Osgiliath - which has Gondor units.
-                    Nation.GONDOR
-                    if nation_str == "None"
-                    else Nation[nation_str.upper()]
-                )
-                army = Army()
-                for _ in range(int(regulars)):
-                    army.units.append(ArmyUnit(UnitType.REGULAR, nation))
-                for _ in range(int(elites)):
-                    army.units.append(ArmyUnit(UnitType.ELITE, nation))
-                for _ in range(int(leaders)):
-                    army.units.append(ArmyUnit(UnitType.LEADER, nation))
-                armies[name] = army
-    return armies
+def init_army(
+    regulars: int, elites: int, leaders: int, nation: Optional[Nation], region: Region
+) -> Optional[Army]:
+    army = None
+    if regulars > 0 or elites > 0 or leaders > 0:
+        # This only occurs in Osgiliath - which has Gondor units.
+        nation = Nation.GONDOR if nation is None else nation
+        army = Army(
+            Side.FREE if nation in NATION_SIDE[Side.FREE] else Side.SHADOW, region
+        )
+        for _ in range(regulars):
+            army.units.append(ArmyUnit(UnitType.REGULAR, nation))
+        for _ in range(elites):
+            army.units.append(ArmyUnit(UnitType.ELITE, nation))
+        for _ in range(leaders):
+            army.units.append(ArmyUnit(UnitType.LEADER, nation))
+    return army
 
 
 def init_player(side: Side) -> "PlayerState":
@@ -153,8 +159,7 @@ class PlayerState:  # pylint: disable=too-many-instance-attributes
 
 @dataclass
 class GameState:  # pylint: disable=too-many-instance-attributes
-    region_map: dict[str, Region] = field(default_factory=init_region_map)
-    army_map: dict[str, Army] = field(default_factory=init_army_map)
+    regions: RegionMap = field(default_factory=init_region_map)
     reinforcements: dict[Nation, list[int]] = field(
         default_factory=lambda: deepcopy(INITIAL_REINFORCEMENTS)
     )
@@ -170,6 +175,8 @@ class GameState:  # pylint: disable=too-many-instance-attributes
     hunt_box_eyes: int = 0
     hunt_box_character: int = 0
 
+    characters_mustered: set[CharacterID] = field(default_factory=set)
+
     def __post_init__(self) -> None:
-        self.fellowship.location = self.region_map[INITIAL_FELLOWSHIP_LOCATION]
+        self.fellowship.location = self.regions.with_name(INITIAL_FELLOWSHIP_LOCATION)
         self.players = self.free_player, self.shadow_player

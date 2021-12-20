@@ -29,3 +29,4 @@ notes = [
   "FIXME",
   "XXX",
 ]
+ignore-imports="yes"

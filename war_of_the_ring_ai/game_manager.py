@@ -4,13 +4,19 @@ from typing import Optional
 
 from war_of_the_ring_ai.game_objects import DIE, DieResult, Side
 from war_of_the_ring_ai.game_requests import (
+    ArmyAction,
     ChangeGuide,
+    CharacterAction,
+    ChooseDie,
     DeclareFellowship,
     DeclareFellowshipLocation,
     Discard,
     EnterMordor,
     HuntAllocation,
+    MusterAction,
+    PalantirAction,
     PassTurn,
+    WillAction,
 )
 from war_of_the_ring_ai.game_state import GameState
 
@@ -44,7 +50,9 @@ class GameManager:
         fellowship = self.state.fellowship
 
         # Change guide
-        fellowship.guide = player.agent.response(ChangeGuide(fellowship.companions))
+        fellowship.guide = player.agent.response(
+            ChangeGuide(list(fellowship.companions.values()))
+        )
 
         # Declare fellowship
         if not fellowship.in_mordor() and not fellowship.revealed:
@@ -99,6 +107,7 @@ class GameManager:
 
         while True:
             # End the phase when both players have used all dice
+            # TODO This can be player.dice.total() when mypy supports python 3.10
             active_dice_count = sum(active_player.dice.values())
             inactive_dice_count = sum(inactive_player.dice.values())
             if active_dice_count == 0 and inactive_dice_count == 0:
@@ -111,7 +120,101 @@ class GameManager:
                     continue
 
             # Select action die
+            action_die = active_player.agent.response(
+                ChooseDie(
+                    [die for die, count in active_player.dice.items() if count > 0]
+                )
+            )
+
             # Take action
+            action = []
+            if action_die == DieResult.CHARACTER:
+                action = active_player.agent.response(
+                    CharacterAction(
+                        active_player.side, self.state.fellowship, self.state.regions
+                    )
+                )
+            elif action_die == DieResult.ARMY:
+                action = active_player.agent.response(
+                    ArmyAction(active_player.side, self.state.regions)
+                )
+            elif action_die == DieResult.MUSTER:
+                action = active_player.agent.response(
+                    MusterAction(
+                        active_player.side,
+                        self.state.regions,
+                        self.state.politics,
+                        self.state.reinforcements,
+                        self.state.characters_mustered,
+                        self.state.fellowship,
+                    )
+                )
+            elif action_die == DieResult.PALANTIR:
+                action = active_player.agent.response(PalantirAction(active_player))
+            elif action_die == DieResult.HYBRID:
+                action.append(
+                    active_player.agent.response(
+                        ArmyAction(active_player.side, self.state.regions)
+                    )
+                )
+                action.append(
+                    active_player.agent.response(
+                        MusterAction(
+                            active_player.side,
+                            self.state.regions,
+                            self.state.politics,
+                            self.state.reinforcements,
+                            self.state.characters_mustered,
+                            self.state.fellowship,
+                        )
+                    )
+                )
+            elif action_die == DieResult.WILL:
+                action.append(
+                    active_player.agent.response(
+                        CharacterAction(
+                            active_player.side,
+                            self.state.fellowship,
+                            self.state.regions,
+                        )
+                    )
+                )
+                action.append(
+                    active_player.agent.response(
+                        ArmyAction(active_player.side, self.state.regions)
+                    )
+                )
+                action.append(
+                    active_player.agent.response(
+                        MusterAction(
+                            active_player.side,
+                            self.state.regions,
+                            self.state.politics,
+                            self.state.reinforcements,
+                            self.state.characters_mustered,
+                            self.state.fellowship,
+                        )
+                    )
+                )
+                action.append(
+                    active_player.agent.response(PalantirAction(active_player))
+                )
+                aragorn_regions = {
+                    self.state.regions.with_name("Dol Amroth"),
+                    self.state.regions.with_name("Pelargir"),
+                    self.state.regions.with_name("Minas Tirith"),
+                }
+                action.append(
+                    active_player.agent.response(
+                        WillAction(
+                            self.state.characters_mustered,
+                            self.state.fellowship.companions,
+                            aragorn_regions,
+                        )
+                    )
+                )
+
+            print(action)
 
             # Check for ring victory
             fellowship = self.state.fellowship

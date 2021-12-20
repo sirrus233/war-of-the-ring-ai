@@ -3,6 +3,7 @@
     rev: '21.12b0'
     hooks:
       - id: black
+        args: ['--target-version', 'py310']
   - repo: 'https://gitlab.com/pycqa/flake8'
     rev: '3.9.2'
     hooks:
@@ -16,7 +17,7 @@
     rev: '5.10.1'
     hooks:
       - id: isort 
-        args: ["--profile", "black"]
+        args: ['--profile', 'black']
   - repo: local
     hooks:
       - id: pylint
