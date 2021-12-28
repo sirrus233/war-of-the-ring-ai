@@ -250,10 +250,10 @@ class RegionMap:
             lambda r: r.army is not None and r.army.has_characters()
         )
 
-    def with_character(self, character: CharacterID) -> set[Region]:
+    def with_character(self, character: CharacterID) -> Region:
         return self.with_predicate(
             lambda r: r.army is not None and r.army.has_character(character)
-        )
+        ).pop()
 
 
 @dataclass

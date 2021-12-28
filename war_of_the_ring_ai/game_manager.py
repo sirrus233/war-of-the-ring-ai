@@ -34,7 +34,12 @@ from war_of_the_ring_ai.game_requests import (
     PlayMusterEvent,
     WillAction,
 )
-from war_of_the_ring_ai.game_state import ALL_COMPANIONS, ALL_MINIONS, GameState
+from war_of_the_ring_ai.game_state import (
+    ALL_COMPANIONS,
+    ALL_MINIONS,
+    GameState,
+    PlayerState,
+)
 
 
 class GameManager:
@@ -119,7 +124,7 @@ class GameManager:
         self.state.shadow_player.dice[DieResult.EYE] = 0
 
     def action_resolution_phase(self) -> Optional[Side]:
-        return TurnManager(self.state).start_turn()
+        return TurnManager(self.state).play_turn()
 
     def victory_check_phase(self) -> Optional[Side]:
         if self.state.shadow_player.victory_points >= 10:
@@ -260,193 +265,7 @@ class TurnManager:
             return Side.FREE
         return None
 
-    def do_action(self, action: Action) -> None:
-        # TODO Refactor this, probably into its own class, or several classes
-        player = self.active_player
-
-        if action == Action.SKIP:
-            pass
-
-        if action == Action.DRAW_CHARACTER_EVENT:
-            player.hand.append(player.character_deck.pop())
-            while len(player.hand) > 6:
-                player.hand.remove(player.agent.response(Discard(player.hand)))
-
-        if action == Action.DRAW_STRATEGY_EVENT:
-            player.hand.append(player.strategy_deck.pop())
-            while len(player.hand) > 6:
-                player.hand.remove(player.agent.response(Discard(player.hand)))
-
-        if action == Action.PLAY_CHARACTER_EVENT:
-            card = player.agent.response(PlayCharacterEvent(player.hand))
-            player.hand.remove(card)
-            if self.state.fellowship.guide.name == CharacterID.GANDALF_GREY:
-                if player.character_deck:
-                    player.hand.append(player.character_deck.pop())
-                    while len(player.hand) > 6:
-                        player.hand.remove(player.agent.response(Discard(player.hand)))
-
-        if action == Action.PLAY_ARMY_EVENT:
-            card = player.agent.response(PlayArmyEvent(player.hand))
-            player.hand.remove(card)
-            if self.state.fellowship.guide.name == CharacterID.GANDALF_GREY:
-                if player.strategy_deck:
-                    player.hand.append(player.strategy_deck.pop())
-                    while len(player.hand) > 6:
-                        player.hand.remove(player.agent.response(Discard(player.hand)))
-
-        if action == Action.PLAY_MUSTER_EVENT:
-            card = player.agent.response(PlayMusterEvent(player.hand))
-            player.hand.remove(card)
-            if self.state.fellowship.guide.name == CharacterID.GANDALF_GREY:
-                if player.strategy_deck:
-                    player.hand.append(player.strategy_deck.pop())
-                    while len(player.hand) > 6:
-                        player.hand.remove(player.agent.response(Discard(player.hand)))
-
-        if action == Action.DIPLOMACY:
-            nation = player.agent.response(Diplomacy(player.side, self.state.politics))
-            self.state.politics[nation].disposition -= 1
-
-        if action == Action.MUSTER_ELITE:
-            pass
-
-        if action == Action.MUSTER_REGULAR_REGULAR:
-            pass
-
-        if action == Action.MUSTER_REGULAR_LEADER:
-            pass
-
-        if action == Action.MUSTER_LEADER_LEADER:
-            pass
-
-        if action == Action.MUSTER_SARUMAN:
-            saruman = ALL_MINIONS[CharacterID.SARUMAN]
-            self.state.characters_mustered.add(saruman.name)
-            orthanc = self.state.regions.with_name("Orthanc")
-            if orthanc.army is not None:
-                orthanc.army.characters.append(saruman)
-            else:
-                orthanc.army = Army(Side.SHADOW, orthanc, characters=[saruman])
-
-        if action == Action.MUSTER_WITCH_KING:
-            witch_king = ALL_MINIONS[CharacterID.WITCH_KING]
-            self.state.characters_mustered.add(witch_king.name)
-            army = player.agent.response(MusterWitchKingArmy(self.state.regions))
-            army.characters.append(witch_king)
-
-        if action == Action.MUSTER_MOUTH_OF_SAURON:
-            mouth = ALL_MINIONS[CharacterID.MOUTH_OF_SAURON]
-            self.state.characters_mustered.add(mouth.name)
-            region = player.agent.response(MusterWitchKingArmy(self.state.regions))
-            if region.army is not None:
-                region.army.characters.append(mouth)
-            else:
-                region.army = Army(Side.SHADOW, region, characters=[mouth])
-
-        if action == Action.MOVE_ARMIES:
-            pass
-
-        if action == Action.ATTACK:
-            pass
-
-        if action == Action.LEADER_MOVE:
-            pass
-
-        if action == Action.LEADER_ATTACK:
-            pass
-
-        if action == Action.MOVE_FELLOWSHIP:
-            # TODO Reduce corruption with companions
-            self.state.fellowship.progress += 1
-
-            if self.state.fellowship.in_mordor():
-                tile = self.state.hunt_pool.draw()
-
-                if tile.is_eye():
-                    corruption = (
-                        self.state.hunt_box_eyes + self.state.hunt_box_character
-                    )
-                elif tile.is_shelob():
-                    corruption = random.randint(1, 6)
-                else:
-                    corruption = tile.corruption
-                self.state.fellowship.corruption += corruption
-
-                if tile.side == Side.SHADOW:
-                    self.state.fellowship.progress -= 1
-
-                if tile.reveal:
-                    self.state.fellowship.revealed = True
-
-            else:
-                assert (location := self.state.fellowship.location) is not None
-                hunt_roll = [
-                    random.randint(1, 6) for _ in range(self.state.hunt_box_eyes)
-                ]
-                hits = sum(
-                    1 for i in hunt_roll if i >= 6 - self.state.hunt_box_character
-                )
-                misses = len(hunt_roll) - hits
-                reroll_count = 0
-                if location.army is not None:
-                    if location.army.leaders() > 0:
-                        reroll_count += 1
-                    if location.army.regulars() + location.army.elites() > 0:
-                        reroll_count += 1
-                if (
-                    location.nation in NATION_SIDE[Side.SHADOW]
-                    and location.settlement == Settlement.STRONGHOLD
-                    and not location.is_conquered
-                ):
-                    reroll_count += 1
-                reroll = [
-                    random.randint(1, 6) for _ in range(min(misses, reroll_count))
-                ]
-                hits += sum(1 for i in reroll if i >= 6 - self.state.hunt_box_character)
-
-                tile = self.state.hunt_pool.draw()
-
-                if tile.is_eye():
-                    corruption = hits
-                    self.state.hunt_pool.reserve.append(tile)
-                else:
-                    corruption = tile.corruption
-                self.state.fellowship.corruption += corruption
-
-                if tile.reveal:
-                    self.state.fellowship.revealed = True
-
-        if action == Action.HIDE_FELLOWSHIP:
-            # TODO Strider's Guide ability
-            self.state.fellowship.revealed = False
-
-        if action == Action.SEPARATE_COMPANIONS:
-            pass
-
-        if action == Action.MOVE_COMPANIONS:
-            pass
-
-        if action == Action.MOVE_MINIONS:
-            pass
-
-        if action == Action.MUSTER_GANDALF:
-            gandalf = ALL_COMPANIONS[CharacterID.GANDALF_WHITE]
-            self.state.characters_mustered.add(gandalf.name)
-            region = player.agent.response(MusterGandalfWhiteRegion(self.state.regions))
-            if region.army is not None:
-                region.army.characters.append(gandalf)
-            else:
-                region.army = Army(Side.FREE, region, characters=[gandalf])
-
-        if action == Action.MUSTER_ARAGORN:
-            aragorn = ALL_COMPANIONS[CharacterID.ARAGORN]
-            self.state.characters_mustered.add(aragorn.name)
-            region = self.state.regions.with_character(CharacterID.STRIDER)
-            region.army.characters.remove(ALL_COMPANIONS[CharacterID.STRIDER])
-            region.army.characters.append(aragorn)
-
-    def start_turn(self) -> Optional[Side]:
+    def play_turn(self) -> Optional[Side]:
         while not self.is_turn_over():
             # TODO Elven ring option (CAN pass or use different die after using ring)
             # TODO Auto-corruption from Mordor
@@ -456,13 +275,247 @@ class TurnManager:
             else:
                 action_die = self.choose_action_die()
                 action = self.choose_action(action_die)
-                self.do_action(action)
+                ActionManager(self.state, self.active_player).do_action(action)
                 self.end_action()
 
             if (winner := self.is_ring_victory()) is not None:
                 return winner
 
         return None
+
+
+class ActionManager:  # pylint: disable=too-many-public-methods
+    def __init__(self, state: GameState, active_player: PlayerState) -> None:
+        self.state = state
+        self.player = active_player
+
+    def do_action(self, action: Action) -> None:
+        getattr(self, action.name.lower())()
+
+    def skip(self) -> None:  # pylint: disable=no-self-use
+        return
+
+    def draw_character_event(self) -> None:
+        self.player.hand.append(self.player.character_deck.pop())
+        while len(self.player.hand) > 6:
+            discarded_card = self.player.agent.response(Discard(self.player.hand))
+            self.player.hand.remove(discarded_card)
+
+    def draw_strategy_event(self) -> None:
+        self.player.hand.append(self.player.strategy_deck.pop())
+        while len(self.player.hand) > 6:
+            discarded_card = self.player.agent.response(Discard(self.player.hand))
+            self.player.hand.remove(discarded_card)
+
+    def play_character_event(self) -> None:
+        card = self.player.agent.response(PlayCharacterEvent(self.player.hand))
+        self.player.hand.remove(card)
+
+        if self.state.fellowship.guide.name == CharacterID.GANDALF_GREY:
+            if self.player.character_deck:
+                self.player.hand.append(self.player.character_deck.pop())
+                while len(self.player.hand) > 6:
+                    self.player.hand.remove(
+                        self.player.agent.response(Discard(self.player.hand))
+                    )
+
+    def play_army_event(self) -> None:
+        card = self.player.agent.response(PlayArmyEvent(self.player.hand))
+        self.player.hand.remove(card)
+        if self.state.fellowship.guide.name == CharacterID.GANDALF_GREY:
+            if self.player.strategy_deck:
+                self.player.hand.append(self.player.strategy_deck.pop())
+                while len(self.player.hand) > 6:
+                    self.player.hand.remove(
+                        self.player.agent.response(Discard(self.player.hand))
+                    )
+
+    def play_muster_event(self) -> None:
+        card = self.player.agent.response(PlayMusterEvent(self.player.hand))
+        self.player.hand.remove(card)
+        if self.state.fellowship.guide.name == CharacterID.GANDALF_GREY:
+            if self.player.strategy_deck:
+                self.player.hand.append(self.player.strategy_deck.pop())
+                while len(self.player.hand) > 6:
+                    self.player.hand.remove(
+                        self.player.agent.response(Discard(self.player.hand))
+                    )
+
+    def diplomacy(self) -> None:
+        nation = self.player.agent.response(
+            Diplomacy(self.player.side, self.state.politics)
+        )
+        self.state.politics[nation].disposition -= 1
+
+    def muster_elite(self) -> None:
+        raise NotImplementedError()
+
+    def muster_regular_regular(self) -> None:
+        raise NotImplementedError()
+
+    def muster_regular_leader(self) -> None:
+        raise NotImplementedError()
+
+    def muster_leader_leader(self) -> None:
+        raise NotImplementedError()
+
+    def muster_saruman(self) -> None:
+        saruman = ALL_MINIONS[CharacterID.SARUMAN]
+        self.state.characters_mustered.add(saruman.name)
+        orthanc = self.state.regions.with_name("Orthanc")
+        if orthanc.army is not None:
+            orthanc.army.characters.append(saruman)
+        else:
+            orthanc.army = Army(Side.SHADOW, orthanc, characters=[saruman])
+
+    def muster_witch_king(self) -> None:
+        witch_king = ALL_MINIONS[CharacterID.WITCH_KING]
+        self.state.characters_mustered.add(witch_king.name)
+        army = self.player.agent.response(MusterWitchKingArmy(self.state.regions))
+        army.characters.append(witch_king)
+
+    def muster_mouth_of_sauron(self) -> None:
+        mouth = ALL_MINIONS[CharacterID.MOUTH_OF_SAURON]
+        self.state.characters_mustered.add(mouth.name)
+        region = self.player.agent.response(MusterWitchKingArmy(self.state.regions))
+        if region.army is not None:
+            region.army.characters.append(mouth)
+        else:
+            region.army = Army(Side.SHADOW, region, characters=[mouth])
+
+    def move_armies(self) -> None:
+        raise NotImplementedError()
+
+    def attack(self) -> None:
+        raise NotImplementedError()
+
+    def leader_move(self) -> None:
+        raise NotImplementedError()
+
+    def leader_attack(self) -> None:
+        raise NotImplementedError()
+
+    def move_fellowship(self) -> None:
+        self.state.fellowship.progress += 1
+        HuntManager(self.state).hunt()
+        # TODO connect with hunt manager
+        # TODO Add character die to hunt box
+
+    def hide_fellowship(self) -> None:
+        # TODO Strider's Guide ability (should allow this action from any die)
+        self.state.fellowship.revealed = False
+
+    def separate_companions(self) -> None:
+        raise NotImplementedError()
+
+    def move_companions(self) -> None:
+        raise NotImplementedError()
+
+    def move_minions(self) -> None:
+        raise NotImplementedError()
+
+    def muster_gandalf(self) -> None:
+        gandalf = ALL_COMPANIONS[CharacterID.GANDALF_WHITE]
+        self.state.characters_mustered.add(gandalf.name)
+        region = self.player.agent.response(
+            MusterGandalfWhiteRegion(self.state.regions)
+        )
+        if region.army is not None:
+            region.army.characters.append(gandalf)
+        else:
+            region.army = Army(Side.FREE, region, characters=[gandalf])
+
+    def muster_aragorn(self) -> None:
+        aragorn = ALL_COMPANIONS[CharacterID.ARAGORN]
+        self.state.characters_mustered.add(aragorn.name)
+        region = self.state.regions.with_character(CharacterID.STRIDER)
+        if region.army is not None:
+            region.army.characters.remove(ALL_COMPANIONS[CharacterID.STRIDER])
+            region.army.characters.append(aragorn)
+
+
+class HuntManager:
+    def __init__(self, state: GameState) -> None:
+        # TODO Move when revealed
+        self.state = state
+
+    def get_reroll_count(self) -> int:
+        reroll_count = 0
+
+        location = self.state.fellowship.location
+        if location is None:
+            raise ValueError("Cannot determine reroll count when Fellowship in Mordor.")
+
+        has_nazgul = False
+        has_enemy_units = False
+        if location.army is not None:
+            has_enemy_army = location.army.side == Side.SHADOW
+            has_nazgul = has_enemy_army and location.army.leaders() > 0
+            has_enemy_units = (
+                has_enemy_army and location.army.regulars() + location.army.elites() > 0
+            )
+        has_enemy_stronghold = (
+            location.nation in NATION_SIDE[Side.SHADOW]
+            and location.settlement == Settlement.STRONGHOLD
+            and not location.is_conquered
+        )
+
+        for reroll_grant in [has_nazgul, has_enemy_units, has_enemy_stronghold]:
+            if reroll_grant:
+                reroll_count += 1
+
+        return reroll_count
+
+    def hunt_roll(self) -> int:
+        hit_result = 6 - self.state.hunt_box_character
+        hunt_roll_results = [
+            random.randint(1, 6) for _ in range(self.state.hunt_box_eyes)
+        ]
+        hits = sum(1 for i in hunt_roll_results if i >= hit_result)
+        misses = len(hunt_roll_results) - hits
+        max_rerolls = self.get_reroll_count()
+        reroll_results = [random.randint(1, 6) for _ in range(min(misses, max_rerolls))]
+        hits += sum(1 for i in reroll_results if i >= hit_result)
+        return hits
+
+    def eye_corruption(self, hits: int = 0) -> int:
+        if self.state.fellowship.in_mordor():
+            return self.state.hunt_box_eyes + self.state.hunt_box_character
+        return hits
+
+    def draw_tile(self, hits: int = 0) -> int:
+        tile = self.state.hunt_pool.draw()
+
+        if tile.side == Side.SHADOW:
+            self.state.fellowship.progress -= 1
+
+        if tile.reveal:
+            self.state.fellowship.revealed = True
+
+        if tile.is_eye():
+            corruption = self.eye_corruption(hits)
+            self.state.hunt_pool.reserve.append(tile)
+        elif tile.is_shelob():
+            corruption = random.randint(1, 6)
+        else:
+            corruption = tile.corruption
+
+        return corruption
+
+    def hunt(self) -> None:
+        if self.state.fellowship.in_mordor():
+            corruption = self.draw_tile()
+            self.state.fellowship.corruption += corruption
+        elif (hits := self.hunt_roll()) > 0:
+            corruption = self.draw_tile(hits)
+        else:
+            corruption = 0
+
+        # TODO Merry/Pippin guide ability
+        # TODO Reduce corruption with companions
+
+        if corruption > 0:
+            self.state.fellowship.corruption += corruption
 
 
 if __name__ != "__main__()":
