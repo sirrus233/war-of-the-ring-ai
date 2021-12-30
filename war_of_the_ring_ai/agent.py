@@ -1,7 +1,8 @@
 import random
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
-from war_of_the_ring_ai.game_requests import Request
+if TYPE_CHECKING:
+    from war_of_the_ring_ai.game_requests import Request
 
 Strategy = Callable[[list[Any]], Any]
 
@@ -15,7 +16,7 @@ class Agent:  # pylint: disable=too-few-public-methods
         self.name: str = name
         self.strategy: Strategy = strategy
 
-    def response(self, request: Request) -> Any:
+    def response(self, request: "Request") -> Any:
         request_name = type(request).__name__
         if len(request.options) == 0:
             raise ValueError(

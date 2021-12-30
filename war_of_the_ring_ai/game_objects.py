@@ -40,6 +40,7 @@ class CharacterID(Enum):
     SARUMAN = 9
     WITCH_KING = 10
     MOUTH_OF_SAURON = 11
+    GOLLUM = 12
 
 
 class DieResult(Enum):
@@ -62,6 +63,12 @@ class UnitType(Enum):
     REGULAR = 0
     ELITE = 1
     LEADER = 2
+
+
+class Casualty(Enum):
+    NONE = 0
+    GUIDE = 1
+    RANDOM = 2
 
 
 class Action(Enum):
@@ -275,7 +282,7 @@ class Minion(Character):
 
 @dataclass
 class Fellowship:
-    companions: dict[CharacterID, Companion]
+    companions: list[Companion]
     guide: Companion
     location: Optional[Region] = None
     revealed: bool = False

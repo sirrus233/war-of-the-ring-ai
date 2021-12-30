@@ -7,13 +7,16 @@ from war_of_the_ring_ai.game_objects import (
     NATION_SIDE,
     Action,
     Army,
+    Casualty,
     CharacterID,
+    Companion,
     DieResult,
     Settlement,
     Side,
 )
 from war_of_the_ring_ai.game_requests import (
     ArmyAction,
+    CasualtyStrategy,
     ChangeGuide,
     CharacterAction,
     ChooseDie,
@@ -71,9 +74,7 @@ class GameManager:
         fellowship = self.state.fellowship
 
         # Change guide
-        fellowship.guide = player.agent.response(
-            ChangeGuide(list(fellowship.companions.values()))
-        )
+        fellowship.guide = player.agent.response(ChangeGuide(fellowship.companions))
 
         # Declare fellowship
         if not fellowship.in_mordor() and not fellowship.revealed:
@@ -361,7 +362,7 @@ class ActionManager:  # pylint: disable=too-many-public-methods
 
     def muster_saruman(self) -> None:
         saruman = ALL_MINIONS[CharacterID.SARUMAN]
-        self.state.characters_mustered.add(saruman.name)
+        self.state.characters_mustered.add(saruman)
         orthanc = self.state.regions.with_name("Orthanc")
         if orthanc.army is not None:
             orthanc.army.characters.append(saruman)
@@ -370,13 +371,13 @@ class ActionManager:  # pylint: disable=too-many-public-methods
 
     def muster_witch_king(self) -> None:
         witch_king = ALL_MINIONS[CharacterID.WITCH_KING]
-        self.state.characters_mustered.add(witch_king.name)
+        self.state.characters_mustered.add(witch_king)
         army = self.player.agent.response(MusterWitchKingArmy(self.state.regions))
         army.characters.append(witch_king)
 
     def muster_mouth_of_sauron(self) -> None:
         mouth = ALL_MINIONS[CharacterID.MOUTH_OF_SAURON]
-        self.state.characters_mustered.add(mouth.name)
+        self.state.characters_mustered.add(mouth)
         region = self.player.agent.response(MusterWitchKingArmy(self.state.regions))
         if region.army is not None:
             region.army.characters.append(mouth)
@@ -416,7 +417,7 @@ class ActionManager:  # pylint: disable=too-many-public-methods
 
     def muster_gandalf(self) -> None:
         gandalf = ALL_COMPANIONS[CharacterID.GANDALF_WHITE]
-        self.state.characters_mustered.add(gandalf.name)
+        self.state.characters_mustered.add(gandalf)
         region = self.player.agent.response(
             MusterGandalfWhiteRegion(self.state.regions)
         )
@@ -427,7 +428,7 @@ class ActionManager:  # pylint: disable=too-many-public-methods
 
     def muster_aragorn(self) -> None:
         aragorn = ALL_COMPANIONS[CharacterID.ARAGORN]
-        self.state.characters_mustered.add(aragorn.name)
+        self.state.characters_mustered.add(aragorn)
         region = self.state.regions.with_character(CharacterID.STRIDER)
         if region.army is not None:
             region.army.characters.remove(ALL_COMPANIONS[CharacterID.STRIDER])
@@ -502,20 +503,35 @@ class HuntManager:
 
         return corruption
 
+    def choose_casualty(self) -> Optional[Companion]:
+        guide = self.state.fellowship.guide
+        strategy = self.state.free_player.agent.response(CasualtyStrategy(guide))
+        if strategy == Casualty.GUIDE:
+            return self.state.fellowship.guide
+        if strategy == Casualty.RANDOM:
+            return random.choice(self.state.fellowship.companions)
+        return None
+
     def hunt(self) -> None:
         if self.state.fellowship.in_mordor():
             corruption = self.draw_tile()
-            self.state.fellowship.corruption += corruption
         elif (hits := self.hunt_roll()) > 0:
             corruption = self.draw_tile(hits)
         else:
             corruption = 0
 
         # TODO Merry/Pippin guide ability
-        # TODO Reduce corruption with companions
 
         if corruption > 0:
-            self.state.fellowship.corruption += corruption
+            casualty = self.choose_casualty()
+            if casualty is not None:
+                guide = self.state.free_player.agent.response(
+                    ChangeGuide(self.state.fellowship.companions, casualty)
+                )
+                self.state.fellowship.guide = guide
+                self.state.fellowship.companions.remove(casualty)
+
+        self.state.fellowship.corruption += corruption
 
 
 if __name__ != "__main__()":

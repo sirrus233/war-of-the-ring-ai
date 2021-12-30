@@ -1,11 +1,14 @@
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import Any, Optional
 
 from war_of_the_ring_ai.game_objects import (
     NATION_SIDE,
     Action,
+    Army,
     Card,
     CardCategory,
+    Casualty,
+    Character,
     CharacterID,
     Companion,
     DieResult,
@@ -17,9 +20,7 @@ from war_of_the_ring_ai.game_objects import (
     Settlement,
     Side,
 )
-
-if TYPE_CHECKING:
-    from war_of_the_ring_ai.game_state import PlayerState
+from war_of_the_ring_ai.game_state import ALL_COMPANIONS, ALL_MINIONS, PlayerState
 
 
 @dataclass
@@ -38,12 +39,17 @@ class Discard(Request):
 @dataclass
 class ChangeGuide(Request):
     companions: list[Companion]
+    casualty: Optional[Companion] = None
 
     def __post_init__(self) -> None:
         max_level = max(companion.level for companion in self.companions)
         self.options: list[Companion] = [
             companion for companion in self.companions if companion.level == max_level
         ]
+        if self.casualty is not None:
+            self.options.remove(self.casualty)
+        if len(self.options) == 0:
+            self.options.append(ALL_COMPANIONS[CharacterID.GOLLUM])
 
 
 @dataclass
@@ -164,7 +170,7 @@ class MusterAction(Request):
     regions: RegionMap
     politics: dict[Nation, PoliticalStatus]
     reinforcements: dict[Nation, list[int]]
-    characters_mustered: set[CharacterID]
+    characters_mustered: set[Character]
     fellowship: Fellowship
 
     def __post_init__(self) -> None:
@@ -211,13 +217,13 @@ class MusterAction(Request):
 
     def can_muster_saruman(self) -> bool:
         # TODO Account for muster location
-        if CharacterID.SARUMAN in self.characters_mustered:
+        if ALL_MINIONS[CharacterID.SARUMAN] in self.characters_mustered:
             return False
         return self.politics[Nation.ISENGARD].is_at_war()
 
     def can_muster_witch_king(self) -> bool:
         # TODO Account for muster location
-        if CharacterID.WITCH_KING in self.characters_mustered:
+        if ALL_MINIONS[CharacterID.WITCH_KING] in self.characters_mustered:
             return False
         return any(
             self.politics[nation].is_at_war()
@@ -227,7 +233,7 @@ class MusterAction(Request):
 
     def can_muster_mouth_of_sauron(self) -> bool:
         # TODO Account for muster location
-        if CharacterID.MOUTH_OF_SAURON in self.characters_mustered:
+        if ALL_MINIONS[CharacterID.MOUTH_OF_SAURON] in self.characters_mustered:
             return False
         return self.fellowship.in_mordor() or all(
             self.politics[nation].is_at_war() for nation in Nation
@@ -247,7 +253,7 @@ class HybridAction(Request):
 
 @dataclass
 class PalantirAction(Request):
-    player: "PlayerState"
+    player: PlayerState
 
     def __post_init__(self) -> None:
         self.options: list[Action] = [Action.SKIP]
@@ -266,8 +272,8 @@ class PalantirAction(Request):
 
 @dataclass
 class WillAction(Request):
-    characters_mustered: set[CharacterID]
-    companions: dict[CharacterID, Companion]
+    characters_mustered: set[Character]
+    companions: list[Companion]
     regions: RegionMap
 
     character_action_request: CharacterAction
@@ -288,12 +294,8 @@ class WillAction(Request):
             self.options.append(Action.MUSTER_ARAGORN)
 
     def can_muster_gandalf(self) -> bool:
-        gandalf = CharacterID.GANDALF_GREY
-        minions = (
-            CharacterID.SARUMAN,
-            CharacterID.WITCH_KING,
-            CharacterID.MOUTH_OF_SAURON,
-        )
+        gandalf = ALL_COMPANIONS[CharacterID.GANDALF_GREY]
+        minions = ALL_MINIONS.values()
         minion_mustered = any(minion in self.characters_mustered for minion in minions)
         return (
             minion_mustered
@@ -350,7 +352,7 @@ class Diplomacy(Request):
     politics: dict[Nation, PoliticalStatus]
 
     def __post_init__(self) -> None:
-        self.options = [
+        self.options: list[Nation] = [
             nation
             for nation in NATION_SIDE[self.side]
             if self.politics[nation].can_advance()
@@ -367,7 +369,7 @@ class MusterWitchKingArmy(Request):
             for region in self.regions.with_army_units(Side.SHADOW)
             if region.army is not None
         ]
-        self.options = [
+        self.options: list[Army] = [
             army
             for army in shadow_armies
             if any(unit.nation == Nation.SAURON for unit in army.units)
@@ -379,7 +381,7 @@ class MusterMouthRegion(Request):
     regions: RegionMap
 
     def __post_init__(self) -> None:
-        self.options = [
+        self.options: list[Region] = [
             region
             for region in self.regions.with_nation(Nation.SAURON)
             if region.settlement == Settlement.STRONGHOLD and not region.is_conquered
@@ -391,9 +393,20 @@ class MusterGandalfWhiteRegion(Request):
     regions: RegionMap
 
     def __post_init__(self) -> None:
-        self.options = [
+        self.options: list[Region] = [
             region
             for region in self.regions.with_nation(Nation.ELVES)
             if region.settlement == Settlement.STRONGHOLD and not region.is_conquered
         ]
         self.options.append(self.regions.with_name("Fangorn"))
+
+
+@dataclass
+class CasualtyStrategy(Request):
+    guide: Companion
+
+    def __post_init__(self) -> None:
+        self.options: list[Casualty] = [Casualty.NONE]
+        if self.guide.name != CharacterID.GOLLUM:
+            self.options.append(Casualty.GUIDE)
+            self.options.append(Casualty.RANDOM)

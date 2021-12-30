@@ -12,6 +12,7 @@ from war_of_the_ring_ai.game_objects import (
     ArmyUnit,
     Card,
     CardCategory,
+    Character,
     CharacterID,
     Companion,
     DieResult,
@@ -82,6 +83,7 @@ ALL_COMPANIONS = {
     CharacterID.PIPPIN: Companion(CharacterID.PIPPIN, 1, 1),
     CharacterID.GANDALF_WHITE: Companion(CharacterID.GANDALF_WHITE, 3, 1),
     CharacterID.ARAGORN: Companion(CharacterID.ARAGORN, 3, 2),
+    CharacterID.GOLLUM: Companion(CharacterID.GOLLUM, 0, 0),
 }
 
 ALL_MINIONS = {
@@ -92,11 +94,11 @@ ALL_MINIONS = {
 
 
 def init_fellowship() -> Fellowship:
-    initial_companions = {}
+    initial_companions = []
     for companion_id in INITIAL_COMPANION_IDS:
         companion = ALL_COMPANIONS[companion_id]
-        initial_companions[companion.name] = companion
-    guide = initial_companions[INITIAL_GUIDE_ID]
+        initial_companions.append(companion)
+    guide = ALL_COMPANIONS[INITIAL_GUIDE_ID]
     return Fellowship(initial_companions, guide)
 
 
@@ -217,7 +219,7 @@ class GameState:  # pylint: disable=too-many-instance-attributes
     hunt_box_character: int = 0
     hunt_pool: HuntPool = field(default_factory=lambda: HuntPool(INITIAL_HUNT_TILES))
 
-    characters_mustered: set[CharacterID] = field(default_factory=set)
+    characters_mustered: set[Character] = field(default_factory=set)
 
     def __post_init__(self) -> None:
         self.fellowship.location = self.regions.with_name(INITIAL_FELLOWSHIP_LOCATION)
