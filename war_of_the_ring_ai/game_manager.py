@@ -175,6 +175,7 @@ class TurnManager:
 
     def choose_action(self, action_die: DieResult) -> Action:
         # TODO This can be a match statement when mypy supports python 3.10
+        # TODO BUG: Action.SKIP gets added multiple times for some dice
         if action_die == DieResult.CHARACTER:
             return cast(
                 Action,
