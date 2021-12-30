@@ -399,8 +399,7 @@ class ActionManager:  # pylint: disable=too-many-public-methods
     def move_fellowship(self) -> None:
         self.state.fellowship.progress += 1
         HuntManager(self.state).hunt()
-        # TODO connect with hunt manager
-        # TODO Add character die to hunt box
+        self.state.hunt_box_character += 1
 
     def hide_fellowship(self) -> None:
         # TODO Strider's Guide ability (should allow this action from any die)

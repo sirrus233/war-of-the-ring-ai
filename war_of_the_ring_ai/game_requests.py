@@ -216,24 +216,35 @@ class MusterAction(Request):
         return available_regulars > 0, available_elites > 0, available_leaders > 0
 
     def can_muster_saruman(self) -> bool:
-        # TODO Account for muster location
         if ALL_MINIONS[CharacterID.SARUMAN] in self.characters_mustered:
+            return False
+        if self.regions.with_name("Orthanc").is_conquered:
             return False
         return self.politics[Nation.ISENGARD].is_at_war()
 
     def can_muster_witch_king(self) -> bool:
-        # TODO Account for muster location
         if ALL_MINIONS[CharacterID.WITCH_KING] in self.characters_mustered:
             return False
-        return any(
+        sauron_army = any(
+            region.army
+            for region in self.regions.with_army_units(Side.SHADOW)
+            if region.army is not None
+            and any(unit.nation == Nation.SAURON for unit in region.army.units)
+        )
+        sauron_at_war = self.politics[Nation.SAURON].is_at_war()
+        free_nation_at_war = any(
             self.politics[nation].is_at_war()
             for nation in Nation
             if nation in NATION_SIDE[Side.FREE]
         )
+        return sauron_army and sauron_at_war and free_nation_at_war
 
     def can_muster_mouth_of_sauron(self) -> bool:
-        # TODO Account for muster location
         if ALL_MINIONS[CharacterID.MOUTH_OF_SAURON] in self.characters_mustered:
+            return False
+        if all(
+            region.is_conquered for region in self.regions.with_nation(Nation.SAURON)
+        ):
             return False
         return self.fellowship.in_mordor() or all(
             self.politics[nation].is_at_war() for nation in Nation
