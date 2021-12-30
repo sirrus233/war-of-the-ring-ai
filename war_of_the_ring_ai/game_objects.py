@@ -269,15 +269,20 @@ class Character:
     level: int
     leadership: int
 
+    def __hash__(self) -> int:
+        return hash(self.name)
+
 
 @dataclass
 class Companion(Character):
-    pass
+    def __hash__(self) -> int:  # pylint: disable=useless-super-delegation
+        return super().__hash__()
 
 
 @dataclass
 class Minion(Character):
-    pass
+    def __hash__(self) -> int:  # pylint: disable=useless-super-delegation
+        return super().__hash__()
 
 
 @dataclass
