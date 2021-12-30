@@ -153,6 +153,14 @@ class Region:
     def __hash__(self) -> int:
         return hash(self.name)
 
+    def __repr__(self) -> str:
+        army_repr = (
+            "0/0/0"
+            if self.army is None
+            else f"{self.army.regulars()}/{self.army.elites()}/{self.army.leadership()}"
+        )
+        return f"{self.name} ({army_repr})"
+
     def is_enemy_controlled(self, side: Side) -> bool:
         if self.nation is None:
             return False
