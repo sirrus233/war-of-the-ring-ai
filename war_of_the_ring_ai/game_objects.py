@@ -359,6 +359,9 @@ class Army:
     def leaders(self) -> int:
         return sum(1 for unit in self.units if unit.type == UnitType.LEADER)
 
+    def size(self) -> int:
+        return self.regulars() + self.elites()
+
     def valid_moves(self) -> list[Region]:
         return [
             region

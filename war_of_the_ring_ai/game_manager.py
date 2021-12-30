@@ -7,12 +7,15 @@ from war_of_the_ring_ai.game_objects import (
     NATION_SIDE,
     Action,
     Army,
+    ArmyUnit,
     Casualty,
     CharacterID,
     Companion,
     DieResult,
+    Region,
     Settlement,
     Side,
+    UnitType,
 )
 from war_of_the_ring_ai.game_requests import (
     ArmyAction,
@@ -29,6 +32,7 @@ from war_of_the_ring_ai.game_requests import (
     HybridAction,
     MusterAction,
     MusterGandalfWhiteRegion,
+    MusterLocation,
     MusterWitchKingArmy,
     PalantirAction,
     PassTurn,
@@ -349,17 +353,38 @@ class ActionManager:  # pylint: disable=too-many-public-methods
         )
         self.state.politics[nation].disposition -= 1
 
+    def _muster(self, unit_type: UnitType, exclude: Optional[Region] = None) -> Region:
+        region: Region = self.player.agent.response(
+            MusterLocation(
+                self.player.side,
+                unit_type,
+                self.state.politics,
+                self.state.regions,
+                exclude,
+            )
+        )
+        if region.nation is None:
+            raise ValueError(f"Attempted to muster in {region.name}.")
+        if region.army is None:
+            region.army = Army(self.player.side, region)
+        region.army.units.append(ArmyUnit(unit_type, region.nation))
+        self.state.reinforcements[region.nation][unit_type.value] -= 1
+        return region
+
     def muster_elite(self) -> None:
-        raise NotImplementedError()
+        self._muster(UnitType.ELITE)
 
     def muster_regular_regular(self) -> None:
-        raise NotImplementedError()
+        first_region = self._muster(UnitType.REGULAR)
+        self._muster(UnitType.REGULAR, first_region)
 
     def muster_regular_leader(self) -> None:
-        raise NotImplementedError()
+        first_region = self._muster(UnitType.REGULAR)
+        self._muster(UnitType.LEADER, first_region)
 
     def muster_leader_leader(self) -> None:
-        raise NotImplementedError()
+        first_region = self._muster(UnitType.LEADER)
+        self._muster(UnitType.LEADER, first_region)
 
     def muster_saruman(self) -> None:
         saruman = ALL_MINIONS[CharacterID.SARUMAN]

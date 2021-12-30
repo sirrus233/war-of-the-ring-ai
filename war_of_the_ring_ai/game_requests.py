@@ -19,6 +19,7 @@ from war_of_the_ring_ai.game_objects import (
     RegionMap,
     Settlement,
     Side,
+    UnitType,
 )
 from war_of_the_ring_ai.game_state import ALL_COMPANIONS, ALL_MINIONS, PlayerState
 
@@ -201,19 +202,19 @@ class MusterAction(Request):
         )
 
     def can_muster(self) -> tuple[bool, bool, bool]:
-        available_regulars = 0
-        available_elites = 0
-        available_leaders = 0
+        regulars = 0
+        elites = 0
+        leaders = 0
         for nation in NATION_SIDE[self.side]:
             # Mustering is legal if a nation is at war, has units in reinforcements, and
             # has an unconquered settlement to muster in.
             if self.politics[nation].is_at_war() and any(
                 region.is_free(self.side) for region in self.regions.with_nation(nation)
             ):
-                available_regulars += self.reinforcements[nation][0]
-                available_elites += self.reinforcements[nation][1]
-                available_leaders += self.reinforcements[nation][2]
-        return available_regulars > 0, available_elites > 0, available_leaders > 0
+                regulars += self.reinforcements[nation][UnitType.REGULAR.value]
+                elites += self.reinforcements[nation][UnitType.ELITE.value]
+                leaders += self.reinforcements[nation][UnitType.LEADER.value]
+        return regulars > 0, elites > 0, leaders > 0
 
     def can_muster_saruman(self) -> bool:
         if ALL_MINIONS[CharacterID.SARUMAN] in self.characters_mustered:
@@ -421,3 +422,30 @@ class CasualtyStrategy(Request):
         if self.guide.name != CharacterID.GOLLUM:
             self.options.append(Casualty.GUIDE)
             self.options.append(Casualty.RANDOM)
+
+
+@dataclass
+class MusterLocation(Request):
+    side: Side
+    unit_type: UnitType
+    politics: dict[Nation, PoliticalStatus]
+    regions: RegionMap
+    exclude: Optional[Region] = None
+
+    def __post_init__(self) -> None:
+        nations_at_war = [
+            nation
+            for nation, disposition in self.politics.items()
+            if nation in NATION_SIDE[self.side] and disposition.is_at_war()
+        ]
+        settlements = set()
+        for nation in nations_at_war:
+            settlements |= {
+                region
+                for region in self.regions.with_nation(nation)
+                if region.is_free(self.side)
+                and (region.army is None or region.army.size() < 10)
+            }
+        if self.exclude is not None:
+            settlements.remove(self.exclude)
+        self.options: list[Region] = list(settlements)
