@@ -484,9 +484,10 @@ class MoveArmyUnits(Request):
     leader_required: bool
 
     def __post_init__(self) -> None:
+        # TODO This doesn't let you move characters with the army
         self.options: list[list[ArmyUnit]] = [
             list(combination)
-            for i in range(len(self.army.units))
+            for i in range(1, len(self.army.units))
             for combination in combinations(self.army.units, i)
             if not self.leader_required
             or any(unit.type == UnitType.LEADER for unit in combination)
