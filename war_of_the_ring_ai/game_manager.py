@@ -30,6 +30,9 @@ from war_of_the_ring_ai.game_requests import (
     EnterMordor,
     HuntAllocation,
     HybridAction,
+    MoveArmy,
+    MoveArmyDestination,
+    MoveArmyUnits,
     MusterAction,
     MusterGandalfWhiteRegion,
     MusterLocation,
@@ -410,13 +413,34 @@ class ActionManager:  # pylint: disable=too-many-public-methods
         else:
             region.army = Army(Side.SHADOW, region, characters=[mouth])
 
-    def move_armies(self) -> None:
-        raise NotImplementedError()
+    def _request_army_movement(self, leader: bool) -> tuple[list[ArmyUnit], Region]:
+        army = self.player.agent.response(
+            MoveArmy(self.player.side, self.state.regions, leader)
+        )
+        destination = self.player.agent.response(MoveArmyDestination(army))
+        units = self.player.agent.response(MoveArmyUnits(army, leader))
+        for unit in units:
+            army.units.remove(unit)
+        return units, destination
 
-    def attack(self) -> None:
-        raise NotImplementedError()
+    def _execute_army_movement(
+        self, units: list[ArmyUnit], destination: Region
+    ) -> None:
+        if destination.army is None:
+            destination.army = Army(self.player.side, destination)
+        destination.army.units.extend(units)
+        # TODO Disband here if stacking limit is exceeded
+
+    def move_armies(self) -> None:
+        first = self._request_army_movement(False)
+        second = self._request_army_movement(False)
+        self._execute_army_movement(*first)
+        self._execute_army_movement(*second)
 
     def leader_move(self) -> None:
+        self._execute_army_movement(*self._request_army_movement(True))
+
+    def attack(self) -> None:
         raise NotImplementedError()
 
     def leader_attack(self) -> None:

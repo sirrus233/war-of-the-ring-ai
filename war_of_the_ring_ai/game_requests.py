@@ -1,10 +1,12 @@
 from dataclasses import dataclass, field
+from itertools import combinations
 from typing import Any, Optional
 
 from war_of_the_ring_ai.game_objects import (
     NATION_SIDE,
     Action,
     Army,
+    ArmyUnit,
     Card,
     CardCategory,
     Casualty,
@@ -450,3 +452,42 @@ class MusterLocation(Request):
         if self.exclude is not None:
             settlements.remove(self.exclude)
         self.options: list[Region] = list(settlements)
+
+
+@dataclass
+class MoveArmy(Request):
+    side: Side
+    regions: RegionMap
+    leader_required: bool
+
+    def __post_init__(self) -> None:
+        self.options: list[Army] = [
+            region.army
+            for region in self.regions.with_army_units(self.side)
+            if region.army is not None
+            and len(region.army.valid_moves()) > 0
+            and (region.army.leaders() > 0 or not self.leader_required)
+        ]
+
+
+@dataclass
+class MoveArmyDestination(Request):
+    army: Army
+
+    def __post_init__(self) -> None:
+        self.options: list[Region] = self.army.valid_moves()
+
+
+@dataclass
+class MoveArmyUnits(Request):
+    army: Army
+    leader_required: bool
+
+    def __post_init__(self) -> None:
+        self.options: list[list[ArmyUnit]] = [
+            list(combination)
+            for i in range(len(self.army.units))
+            for combination in combinations(self.army.units, i)
+            if not self.leader_required
+            or any(unit.type == UnitType.LEADER for unit in combination)
+        ]
