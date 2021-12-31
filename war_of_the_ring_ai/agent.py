@@ -4,11 +4,19 @@ from typing import TYPE_CHECKING, Any, Callable
 if TYPE_CHECKING:
     from war_of_the_ring_ai.game_requests import Request
 
-Strategy = Callable[[list[Any]], Any]
+Strategy = Callable[["Request"], Any]
 
 
-def random_strategy(choices: list[Any]) -> Any:
-    return random.choice(choices)
+def random_strategy(request: "Request") -> Any:
+    return random.choice(request.options)
+
+
+def human_strategy(request: "Request") -> Any:
+    print(f"{type(request).__name__}")
+    for i, choice in enumerate(request.options):
+        print(f"{i}: {choice}")
+    selection = int(input())
+    return request.options[selection]
 
 
 class Agent:  # pylint: disable=too-few-public-methods
@@ -22,6 +30,6 @@ class Agent:  # pylint: disable=too-few-public-methods
             raise ValueError(
                 f"Request {request_name} yielded no valid response options."
             )
-        response = self.strategy(request.options)
+        response = self.strategy(request)
         print(f"<{self.name}> {request_name}: {response}")
         return response
