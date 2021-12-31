@@ -444,6 +444,7 @@ class MusterLocation(Request):
                 region
                 for region in self.regions.with_nation(nation)
                 if region.is_free(self.side)
+                and region.settlement is not None
                 and (region.army is None or region.army.size() < 10)
             }
         if self.exclude is not None:
