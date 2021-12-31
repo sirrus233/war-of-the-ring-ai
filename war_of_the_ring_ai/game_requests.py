@@ -49,7 +49,7 @@ class ChangeGuide(Request):
         self.options: list[Companion] = [
             companion for companion in self.companions if companion.level == max_level
         ]
-        if self.casualty is not None:
+        if self.casualty is not None and self.casualty in self.options:
             self.options.remove(self.casualty)
         if len(self.options) == 0:
             self.options.append(ALL_COMPANIONS[CharacterID.GOLLUM])
@@ -487,8 +487,32 @@ class MoveArmyUnits(Request):
         # TODO This doesn't let you move characters with the army
         self.options: list[list[ArmyUnit]] = [
             list(combination)
-            for i in range(1, len(self.army.units))
+            for i in range(1, len(self.army.units) + 1)
             for combination in combinations(self.army.units, i)
             if not self.leader_required
             or any(unit.type == UnitType.LEADER for unit in combination)
         ]
+
+
+@dataclass
+class AttackingArmyRegion(Request):
+    side: Side
+    regions: RegionMap
+    leader_required: bool
+
+    def __post_init__(self) -> None:
+        self.options: list[Region] = [
+            region
+            for region in self.regions.with_army_units(self.side)
+            if region.army is not None
+            and len(region.army.valid_attacks()) > 0
+            and (region.army.leaders() > 0 or not self.leader_required)
+        ]
+
+
+@dataclass
+class AttackTarget(Request):
+    army: Army
+
+    def __post_init__(self) -> None:
+        self.options: list[Region] = self.army.valid_attacks()

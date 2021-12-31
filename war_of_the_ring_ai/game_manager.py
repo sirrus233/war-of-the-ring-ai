@@ -19,6 +19,8 @@ from war_of_the_ring_ai.game_objects import (
 )
 from war_of_the_ring_ai.game_requests import (
     ArmyAction,
+    AttackingArmyRegion,
+    AttackTarget,
     CasualtyStrategy,
     ChangeGuide,
     CharacterAction,
@@ -284,7 +286,9 @@ class TurnManager:
             else:
                 action_die = self.choose_action_die()
                 action = self.choose_action(action_die)
-                ActionManager(self.state, self.active_player).do_action(action)
+                ActionManager(
+                    self.state, self.active_player, self.inactive_player
+                ).do_action(action)
                 self.end_action()
 
             if (winner := self.is_ring_victory()) is not None:
@@ -294,9 +298,12 @@ class TurnManager:
 
 
 class ActionManager:  # pylint: disable=too-many-public-methods
-    def __init__(self, state: GameState, active_player: PlayerState) -> None:
+    def __init__(
+        self, state: GameState, active_player: PlayerState, inactive_player: PlayerState
+    ) -> None:
         self.state = state
         self.player = active_player
+        self.inactive_player = inactive_player
 
     def do_action(self, action: Action) -> None:
         getattr(self, action.name.lower())()
@@ -441,10 +448,19 @@ class ActionManager:  # pylint: disable=too-many-public-methods
         self._execute_army_movement(*self._request_army_movement(True))
 
     def attack(self) -> None:
-        raise NotImplementedError()
+        # TODO Allocate rearguard
+        attacker = self.player.agent.response(
+            AttackingArmyRegion(self.player.side, self.state.regions, False)
+        )
+        defender = self.player.agent.response(AttackTarget(attacker.army))
+        BattleManager(attacker, self.player, defender, self.inactive_player).battle()
 
     def leader_attack(self) -> None:
-        raise NotImplementedError()
+        attacker = self.player.agent.response(
+            AttackingArmyRegion(self.player.side, self.state.regions, True)
+        )
+        defender = self.player.agent.response(AttackTarget(attacker.army))
+        BattleManager(attacker, self.player, defender, self.inactive_player).battle()
 
     def move_fellowship(self) -> None:
         self.state.fellowship.progress += 1
@@ -456,13 +472,16 @@ class ActionManager:  # pylint: disable=too-many-public-methods
         self.state.fellowship.revealed = False
 
     def separate_companions(self) -> None:
-        raise NotImplementedError()
+        # TODO Implement
+        pass
 
     def move_companions(self) -> None:
-        raise NotImplementedError()
+        # TODO Implement
+        pass
 
     def move_minions(self) -> None:
-        raise NotImplementedError()
+        # TODO Implement
+        pass
 
     def muster_gandalf(self) -> None:
         gandalf = ALL_COMPANIONS[CharacterID.GANDALF_WHITE]
@@ -581,6 +600,24 @@ class HuntManager:
                 self.state.fellowship.companions.remove(casualty)
 
         self.state.fellowship.corruption += corruption
+
+
+class BattleManager:
+    def __init__(
+        self,
+        attacker: Region,
+        attacking_player: PlayerState,
+        defender: Region,
+        defending_player: PlayerState,
+    ) -> None:
+        self.attacker = attacker
+        self.attacking_player = attacking_player
+        self.defender = defender
+        self.defending_player = defending_player
+
+    def battle(self) -> None:
+        # TODO Implement
+        pass
 
 
 if __name__ != "__main__()":
