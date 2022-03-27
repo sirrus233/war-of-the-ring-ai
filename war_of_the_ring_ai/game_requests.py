@@ -440,7 +440,7 @@ class MusterLocation(Request):
             for nation, disposition in self.politics.items()
             if nation in NATION_SIDE[self.side] and disposition.is_at_war()
         ]
-        settlements = set()
+        settlements: set[Region] = set()
         for nation in nations_at_war:
             settlements |= {
                 region

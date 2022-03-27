@@ -39,7 +39,7 @@ def get_region() -> str:
 
 def get_neighbors() -> str:
     """Query names of all regions adjacent to the current region."""
-    neighbor_list = []
+    neighbor_list: list[str] = []
 
     while neighbor := input("Neighbor: "):
         if neighbor not in REGIONS or neighbor in neighbor_list:

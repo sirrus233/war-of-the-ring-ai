@@ -94,7 +94,7 @@ ALL_MINIONS = {
 
 
 def init_fellowship() -> Fellowship:
-    initial_companions = []
+    initial_companions: list[Companion] = []
     for companion_id in INITIAL_COMPANION_IDS:
         companion = ALL_COMPANIONS[companion_id]
         initial_companions.append(companion)
@@ -103,7 +103,7 @@ def init_fellowship() -> Fellowship:
 
 
 def init_politics() -> dict[Nation, PoliticalStatus]:
-    politics = {}
+    politics: dict[Nation, PoliticalStatus] = {}
     with open("data/politics.csv", newline="", encoding="utf8") as csvfile:
         reader = csv.reader(csvfile, delimiter="|")
         for nation, disposition, active in reader:

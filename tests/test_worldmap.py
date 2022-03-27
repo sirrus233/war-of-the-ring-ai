@@ -41,25 +41,25 @@ class MapData:
     elites: int = field(init=False)
     leaders: int = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         object.__setattr__(self, "neighbors", tuple(self.neighbor_str.split(",")))
         object.__setattr__(self, "regulars", int(self.regulars_str))
         object.__setattr__(self, "elites", int(self.elites_str))
         object.__setattr__(self, "leaders", int(self.leaders_str))
 
 
-with open(OUTFILE, "r", newline="") as csvfile:
+with open(OUTFILE, "r", encoding="utf8", newline="") as csvfile:
     reader = csv.reader(csvfile, delimiter=DELIMITER)
     MAP_DATA = {MapData(*line) for line in reader}
 
 
-def test_all_regions_exist():
+def test_all_regions_exist() -> None:
     expected_regions = REGIONS
     actual_regions = {data.name for data in MAP_DATA}
     assert expected_regions == actual_regions
 
 
-def test_graph_is_undirected():
+def test_graph_is_undirected() -> None:
     lookup = {data.name: data for data in MAP_DATA}
     for data in MAP_DATA:
         for neighbor in data.neighbors:
@@ -69,13 +69,13 @@ def test_graph_is_undirected():
             assert data.name in lookup[neighbor].neighbors
 
 
-def test_nations_have_expected_regions():
+def test_nations_have_expected_regions() -> None:
     for nation, expected_regions in REGION_COUNT_BY_NATION.items():
         actual_regions = sum(1 for data in MAP_DATA if data.nation == nation)
         assert expected_regions == actual_regions
 
 
-def test_nations_have_expected_settlements():
+def test_nations_have_expected_settlements() -> None:
     for nation, expected_settlements in SETTLEMENT_COUNT_BY_NATION.items():
         expected_towns, expected_cities, expected_strongholds = expected_settlements
         actual_towns = sum(
@@ -98,7 +98,7 @@ def test_nations_have_expected_settlements():
         assert expected_strongholds == actual_strongholds
 
 
-def test_fortifications_exist():
+def test_fortifications_exist() -> None:
     expected_fortifications = {"Osgiliath", "Fords of Isen"}
     actual_fortifications = {
         data.name for data in MAP_DATA if data.settlement == "Fortification"
