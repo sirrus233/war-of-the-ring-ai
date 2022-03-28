@@ -40,9 +40,7 @@ notes = [
 
 [tool.pytest.ini_options]
 addopts = """\
-  --cov-config=setup.cfg \
   --cov=war_of_the_ring_ai \
-  --cov=tests \
   --cov-report=term-missing \
   --cov-fail-under=50 \
 """

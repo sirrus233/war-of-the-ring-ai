@@ -453,14 +453,14 @@ class ActionManager:  # pylint: disable=too-many-public-methods
             AttackingArmyRegion(self.player.side, self.state.regions, False)
         )
         defender = self.player.agent.response(AttackTarget(attacker.army))
-        BattleManager(attacker, self.player, defender, self.inactive_player).battle()
+        battle(attacker, self.player, defender, self.inactive_player)
 
     def leader_attack(self) -> None:
         attacker = self.player.agent.response(
             AttackingArmyRegion(self.player.side, self.state.regions, True)
         )
         defender = self.player.agent.response(AttackTarget(attacker.army))
-        BattleManager(attacker, self.player, defender, self.inactive_player).battle()
+        battle(attacker, self.player, defender, self.inactive_player)
 
     def move_fellowship(self) -> None:
         self.state.fellowship.progress += 1
@@ -602,22 +602,17 @@ class HuntManager:
         self.state.fellowship.corruption += corruption
 
 
-class BattleManager:
-    def __init__(
-        self,
-        attacker: Region,
-        attacking_player: PlayerState,
-        defender: Region,
-        defending_player: PlayerState,
-    ) -> None:
-        self.attacker = attacker
-        self.attacking_player = attacking_player
-        self.defender = defender
-        self.defending_player = defending_player
-
-    def battle(self) -> None:
-        # TODO Implement
-        pass
+def battle(
+    attacker: Region,
+    attacking_player: PlayerState,
+    defender: Region,
+    defending_player: PlayerState,
+) -> None:
+    # TODO Implement
+    print(attacker)
+    print(attacking_player)
+    print(defender)
+    print(defending_player)
 
 
 if __name__ != "__main__()":

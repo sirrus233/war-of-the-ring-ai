@@ -1,5 +1,5 @@
 import csv
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from war_of_the_ring_ai.utils.data_entry import DELIMITER, OUTFILE, REGIONS
 
@@ -26,31 +26,24 @@ SETTLEMENT_COUNT_BY_NATION = {
 }
 
 
-@dataclass(frozen=True)
+@dataclass
 class MapData:
-    name: str
-    neighbor_str: str
-    nation: str
-    settlement: str
-    regulars_str: str
-    elites_str: str
-    leaders_str: str
+    def __init__(self, data_row: list[str]):
+        self.name: str = data_row[0]
+        self.neighbors: list[str] = data_row[1].split(",")
+        self.nation: str = data_row[2]
+        self.settlement: str = data_row[3]
+        self.regulars: int = int(data_row[4])
+        self.elites: int = int(data_row[5])
+        self.leaders: int = int(data_row[6])
 
-    neighbors: tuple[str] = field(init=False)
-    regulars: int = field(init=False)
-    elites: int = field(init=False)
-    leaders: int = field(init=False)
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "neighbors", tuple(self.neighbor_str.split(",")))
-        object.__setattr__(self, "regulars", int(self.regulars_str))
-        object.__setattr__(self, "elites", int(self.elites_str))
-        object.__setattr__(self, "leaders", int(self.leaders_str))
+    def __hash__(self) -> int:
+        return hash(self.name)
 
 
 with open(OUTFILE, "r", encoding="utf8", newline="") as csvfile:
     reader = csv.reader(csvfile, delimiter=DELIMITER)
-    MAP_DATA = {MapData(*line) for line in reader}
+    MAP_DATA = {MapData(line) for line in reader}
 
 
 def test_all_regions_exist() -> None:
