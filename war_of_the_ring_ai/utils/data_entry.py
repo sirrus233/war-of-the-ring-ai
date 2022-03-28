@@ -54,32 +54,28 @@ def get_neighbors() -> str:
     return ",".join(neighbor_list)
 
 
-def get_nation() -> str:
-    """Query the nation this region belongs to, if any."""
-    for i, nation in NATIONS.items():
-        print(f"[{i}] {nation}")
+def _make_enumerated_selection(label: str, options: dict[int, str]) -> str:
+    """Choose one (numbered) option from a list of options."""
+    for i, option in options.items():
+        print(f"[{i}] {option}")
 
-    if choice := input("Nation: "):
-        if not choice.isdigit() or int(choice) not in NATIONS:
+    if choice := input(f"{label}: "):
+        if not choice.isdigit() or int(choice) not in options:
             print("Invalid selection.")
-            return get_nation()
-        return NATIONS[int(choice)]
+            return _make_enumerated_selection(label, options)
+        return options[int(choice)]
 
     return "None"
+
+
+def get_nation() -> str:
+    """Query the nation this region belongs to, if any."""
+    return _make_enumerated_selection("Nation", NATIONS)
 
 
 def get_settlement() -> str:
     """Query the type of settlement in this region, if any."""
-    for i, settlement in SETTLEMENTS.items():
-        print(f"[{i}] {settlement}")
-
-    if choice := input("Settlement: "):
-        if not choice.isdigit() or int(choice) not in SETTLEMENTS:
-            print("Invalid selection.")
-            return get_settlement()
-        return SETTLEMENTS[int(choice)]
-
-    return "None"
+    return _make_enumerated_selection("Settlement", SETTLEMENTS)
 
 
 def get_army() -> list[str]:
@@ -110,7 +106,8 @@ def write_output_flow() -> None:
                 get_neighbors(),
                 get_nation(),
                 get_settlement(),
-            ] + get_army()
+                *get_army(),
+            ]
             print(row)
             writer.writerow(row)
 
