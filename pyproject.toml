@@ -1,33 +1,48 @@
 [tool.poetry]
+authors = ["Bradley Sherman <sirrus233@gmail.com>"]
+description = ""
 name = "war-of-the-ring-ai"
 version = "0.1.0"
-description = ""
-authors = ["Bradley Sherman <sirrus233@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
 
 [tool.poetry.dev-dependencies]
-pytest = "^7.1.1"
-pytest-cov = "^3.0.0"
+black = "^22.1.0"
 pre-commit = "^2.16.0"
 pylint = "^2.12.2"
-black = "^22.1.0"
+pytest = "^7.1.1"
+pytest-cov = "^3.0.0"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+strict = true
 
 [tool.pylint.messages_control]
 disable = [
-  "missing-function-docstring", 
-  "missing-class-docstring", 
+  "missing-function-docstring",
+  "missing-class-docstring",
   "missing-module-docstring",
 ]
 
 [tool.pylint.miscellaneous]
+ignore-imports = "yes"
 notes = [
   "FIXME",
   "XXX",
 ]
-ignore-imports="yes"
+
+[tool.pytest.ini_options]
+addopts = """\
+  --cov-config=setup.cfg \
+  --cov=war_of_the_ring_ai \
+  --cov=tests \
+  --cov-report=term-missing \
+  --cov-fail-under=50 \
+"""
