@@ -42,5 +42,4 @@ notes = [
 addopts = """\
   --cov=war_of_the_ring_ai \
   --cov-report=term-missing \
-  --cov-fail-under=50 \
 """

@@ -98,7 +98,7 @@ def write_output_flow() -> None:
     """
     startup = True
     with open(OUTFILE, "a", newline="", encoding="utf8") as csvfile:
-        writer = csv.writer(csvfile, delimiter=DELIMITER)
+        writer = csv.writer(csvfile, delimiter=DELIMITER, lineterminator="\n")
         while startup or not input("Continue (Default: yes): "):
             startup = False
             row = [
@@ -113,4 +113,4 @@ def write_output_flow() -> None:
 
 
 if __name__ == "__main__":
-    write_output_flow()
+    write_output_flow()  # pragma: no cover
