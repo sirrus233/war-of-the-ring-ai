@@ -1,113 +1,114 @@
+from __future__ import annotations
+
 import random
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, auto
 from typing import Callable, Optional
 
 
 class Side(Enum):
-    FREE = 0
-    SHADOW = 1
+    FREE = auto()
+    SHADOW = auto()
 
 
 class Nation(Enum):
-    ELVES = 0
-    DWARVES = 1
-    NORTH = 2
-    ROHAN = 3
-    GONDOR = 4
-    SAURON = 5
-    ISENGARD = 6
-    SOUTHRON = 7
+    ELVES = auto()
+    DWARVES = auto()
+    NORTH = auto()
+    ROHAN = auto()
+    GONDOR = auto()
+    SAURON = auto()
+    ISENGARD = auto()
+    SOUTHRON = auto()
 
 
 class Settlement(Enum):
-    TOWN = 0
-    CITY = 1
-    STRONGHOLD = 2
-    FORTIFICATION = 3
+    TOWN = auto()
+    CITY = auto()
+    STRONGHOLD = auto()
 
 
 class CharacterID(Enum):
-    GANDALF_GREY = 0
-    STRIDER = 1
-    GIMLI = 2
-    LEGOLAS = 3
-    BOROMIR = 4
-    MERRY = 5
-    PIPPIN = 6
-    GANDALF_WHITE = 7
-    ARAGORN = 8
-    SARUMAN = 9
-    WITCH_KING = 10
-    MOUTH_OF_SAURON = 11
-    GOLLUM = 12
+    GANDALF_GREY = auto()
+    STRIDER = auto()
+    GIMLI = auto()
+    LEGOLAS = auto()
+    BOROMIR = auto()
+    MERRY = auto()
+    PIPPIN = auto()
+    GANDALF_WHITE = auto()
+    ARAGORN = auto()
+    SARUMAN = auto()
+    WITCH_KING = auto()
+    MOUTH_OF_SAURON = auto()
+    GOLLUM = auto()
 
 
 class DieResult(Enum):
-    CHARACTER = 0
-    ARMY = 1
-    MUSTER = 2
-    HYBRID = 3
-    PALANTIR = 4
-    EYE = 5
-    WILL = 6
+    CHARACTER = auto()
+    ARMY = auto()
+    MUSTER = auto()
+    HYBRID = auto()
+    PALANTIR = auto()
+    EYE = auto()
+    WILL = auto()
 
 
 class CardCategory(Enum):
-    CHARACTER = 0
-    ARMY = 1
-    MUSTER = 2
+    CHARACTER = auto()
+    ARMY = auto()
+    MUSTER = auto()
 
 
 class UnitType(Enum):
-    REGULAR = 0
-    ELITE = 1
-    LEADER = 2
+    REGULAR = auto()
+    ELITE = auto()
+    LEADER = auto()
 
 
 class Casualty(Enum):
-    NONE = 0
-    GUIDE = 1
-    RANDOM = 2
+    NONE = auto()
+    GUIDE = auto()
+    RANDOM = auto()
 
 
 class Action(Enum):
     # Any die can be thrown away without taking an action
-    SKIP = 0
+    SKIP = auto()
 
     # Palantir
-    DRAW_CHARACTER_EVENT = 1
-    DRAW_STRATEGY_EVENT = 2
-    PLAY_CHARACTER_EVENT = 3
-    PLAY_ARMY_EVENT = 4
-    PLAY_MUSTER_EVENT = 5
+    DRAW_CHARACTER_EVENT = auto()
+    DRAW_STRATEGY_EVENT = auto()
+    PLAY_CHARACTER_EVENT = auto()
+    PLAY_ARMY_EVENT = auto()
+    PLAY_MUSTER_EVENT = auto()
 
     # Muster
-    DIPLOMACY = 6
-    MUSTER_ELITE = 7
-    MUSTER_REGULAR_REGULAR = 8
-    MUSTER_REGULAR_LEADER = 9
-    MUSTER_LEADER_LEADER = 10
-    MUSTER_SARUMAN = 11
-    MUSTER_WITCH_KING = 12
-    MUSTER_MOUTH_OF_SAURON = 13
+    DIPLOMACY = auto()
+    MUSTER_ELITE = auto()
+    MUSTER_REGULAR_REGULAR = auto()
+    MUSTER_REGULAR_LEADER = auto()
+    MUSTER_LEADER_LEADER = auto()
+    MUSTER_SARUMAN = auto()
+    MUSTER_WITCH_KING = auto()
+    MUSTER_MOUTH_OF_SAURON = auto()
 
     # Army
-    MOVE_ARMIES = 14
-    ATTACK = 15
+    MOVE_ARMIES = auto()
+    ATTACK = auto()
 
     # Character
-    LEADER_MOVE = 16
-    LEADER_ATTACK = 17
-    MOVE_FELLOWSHIP = 18
-    HIDE_FELLOWSHIP = 19
-    SEPARATE_COMPANIONS = 20
-    MOVE_COMPANIONS = 21
-    MOVE_MINIONS = 22
+    LEADER_MOVE = auto()
+    LEADER_ATTACK = auto()
+    MOVE_FELLOWSHIP = auto()
+    HIDE_FELLOWSHIP = auto()
+    SEPARATE_COMPANIONS = auto()
+    MOVE_COMPANIONS = auto()
+    MOVE_MINIONS = auto()
 
     # Will
-    MUSTER_GANDALF = 23
-    MUSTER_ARAGORN = 24
+    MUSTER_GANDALF = auto()
+    MUSTER_ARAGORN = auto()
 
 
 NATION_SIDE = {
@@ -144,11 +145,12 @@ DIE = {
 @dataclass
 class Region:
     name: str
-    neighbors: list["Region"] = field(repr=False)
+    neighbors: list[Region] = field(repr=False)
     nation: Optional[Nation] = None
     settlement: Optional[Settlement] = None
-    army: Optional["Army"] = None
-    is_conquered: bool = field(default=False)
+    army: Optional[Army] = None
+    is_conquered: bool = False
+    is_fortification: bool = False
 
     def __hash__(self) -> int:
         return hash(self.name)
