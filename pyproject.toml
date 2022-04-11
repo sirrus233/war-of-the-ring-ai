@@ -31,6 +31,8 @@ disable = [
   "missing-module-docstring",
 ]
 
+[tool.pylint.basic]
+good-names = ["i", "id"]
 [tool.pylint.miscellaneous]
 ignore-imports = "yes"
 notes = [

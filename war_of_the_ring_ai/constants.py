@@ -39,6 +39,11 @@ class CharacterID(Enum):
     GOLLUM = auto()
 
 
+class CharacterType(Enum):
+    COMPANION = auto()
+    MINION = auto()
+
+
 class DieResult(Enum):
     CHARACTER = auto()
     ARMY = auto()
@@ -55,7 +60,7 @@ class CardCategory(Enum):
     MUSTER = auto()
 
 
-class UnitType(Enum):
+class UnitRank(Enum):
     REGULAR = auto()
     ELITE = auto()
     LEADER = auto()
@@ -93,3 +98,12 @@ SHADOW_ACTION_DIE = (
     DieResult.PALANTIR,
     DieResult.EYE,
 )
+
+INITIAL_GUIDE_ID = CharacterID.GANDALF_GREY
+FELLOWSHIP_START = "Rivendell"
+MORDOR_ENTRANCES = ("Morannon", "Minas Morgul")
+
+EYE_CORRUPTION_FLAG = 100
+SHELOB_CORRUPTION_FLAG = 200
+
+NAZGUL_LEVEL_FLAG = -1

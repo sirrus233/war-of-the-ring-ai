@@ -1,226 +1,316 @@
 import csv
 import random
-from collections import Counter, deque
-from copy import deepcopy
+from collections import Counter
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import NamedTuple
 
-from war_of_the_ring_ai.agent import Agent, random_strategy
+from war_of_the_ring_ai.constants import (
+    FELLOWSHIP_START,
+    INITIAL_GUIDE_ID,
+    CharacterType,
+    DieResult,
+    UnitRank,
+)
 from war_of_the_ring_ai.game_objects import (
-    NATION_SIDE,
-    Army,
     ArmyUnit,
     Card,
     CardCategory,
     Character,
     CharacterID,
-    Companion,
-    DieResult,
-    ElvenRings,
-    Fellowship,
-    HuntPool,
     HuntTile,
-    Minion,
     Nation,
-    PoliticalStatus,
     Region,
-    RegionMap,
     Settlement,
     Side,
-    UnitType,
 )
 
-INITIAL_COMPANION_IDS = [
-    CharacterID.GANDALF_GREY,
-    CharacterID.STRIDER,
-    CharacterID.GIMLI,
-    CharacterID.LEGOLAS,
-    CharacterID.BOROMIR,
-    CharacterID.MERRY,
-    CharacterID.PIPPIN,
-]
-
-INITIAL_GUIDE_ID = CharacterID.GANDALF_GREY
-INITIAL_FELLOWSHIP_LOCATION = "Rivendell"
-
-INITIAL_REINFORCEMENTS = {
-    Nation.DWARVES: [2, 3, 3],
-    Nation.ELVES: [2, 4, 0],
-    Nation.GONDOR: [6, 4, 3],
-    Nation.NORTH: [6, 4, 3],
-    Nation.ROHAN: [6, 4, 3],
-    Nation.ISENGARD: [6, 5, 0],
-    Nation.SAURON: [8, 4, 4],
-    Nation.SOUTHRON: [10, 3, 0],
-}
-
-INITIAL_HUNT_TILES = [
-    HuntTile(3, False, None),
-    HuntTile(3, False, None),
-    HuntTile(3, False, None),
-    HuntTile(2, False, None),
-    HuntTile(2, False, None),
-    HuntTile(1, False, None),
-    HuntTile(1, False, None),
-    HuntTile(2, True, None),
-    HuntTile(1, True, None),
-    HuntTile(1, True, None),
-    HuntTile(0, True, None),
-    HuntTile(0, True, None),
-    HuntTile(100, True, None),
-    HuntTile(100, True, None),
-    HuntTile(100, True, None),
-    HuntTile(100, True, None),
-]
-
-ALL_COMPANIONS = {
-    CharacterID.GANDALF_GREY: Companion(CharacterID.GANDALF_GREY, 3, 1),
-    CharacterID.STRIDER: Companion(CharacterID.STRIDER, 3, 1),
-    CharacterID.GIMLI: Companion(CharacterID.GIMLI, 2, 1),
-    CharacterID.LEGOLAS: Companion(CharacterID.LEGOLAS, 2, 1),
-    CharacterID.BOROMIR: Companion(CharacterID.BOROMIR, 2, 1),
-    CharacterID.MERRY: Companion(CharacterID.MERRY, 1, 1),
-    CharacterID.PIPPIN: Companion(CharacterID.PIPPIN, 1, 1),
-    CharacterID.GANDALF_WHITE: Companion(CharacterID.GANDALF_WHITE, 3, 1),
-    CharacterID.ARAGORN: Companion(CharacterID.ARAGORN, 3, 2),
-    CharacterID.GOLLUM: Companion(CharacterID.GOLLUM, 0, 0),
-}
-
-ALL_MINIONS = {
-    CharacterID.SARUMAN: Minion(CharacterID.SARUMAN, 0, 1),
-    CharacterID.WITCH_KING: Minion(CharacterID.WITCH_KING, -1, 2),
-    CharacterID.MOUTH_OF_SAURON: Minion(CharacterID.MOUTH_OF_SAURON, 3, 2),
-}
+IN_FELLOWSHIP = Region("Fellowship")
+IN_REINFORCEMENTS = Region("Reinforcements")
+IN_CASUALTIES = Region("Casualties")
+IN_MORDOR = Region("Mordor")
 
 
-def init_fellowship() -> Fellowship:
-    initial_companions: list[Companion] = []
-    for companion_id in INITIAL_COMPANION_IDS:
-        companion = ALL_COMPANIONS[companion_id]
-        initial_companions.append(companion)
-    guide = ALL_COMPANIONS[INITIAL_GUIDE_ID]
-    return Fellowship(initial_companions, guide)
+class RegionMap:
+    def __init__(self):
+        self._regions_by_name: dict[str, Region] = {}
+        self._regions: dict[Region, list[Region]] = {}
 
+    def add_region(self, region: Region) -> None:
+        if region in self._regions:
+            raise ValueError(f"Region {region.name} already added to map.")
+        self._regions_by_name[region.name] = region
+        self._regions[region] = []
 
-def init_politics() -> dict[Nation, PoliticalStatus]:
-    politics: dict[Nation, PoliticalStatus] = {}
-    with open("data/politics.csv", newline="", encoding="utf8") as csvfile:
-        reader = csv.reader(csvfile, delimiter="|")
-        for nation, disposition, active in reader:
-            politics[Nation[nation]] = PoliticalStatus(
-                int(disposition), active == "active"
-            )
-    return politics
+    def add_connection(self, from_region: Region, to_region: Region) -> None:
+        self._regions[from_region].append(to_region)
 
+    def get_region(self, name: str) -> Region:
+        return self._regions_by_name[name]
 
-def init_deck(side: Side, categories: set[CardCategory]) -> deque[Card]:
-    deck: deque[Card] = deque()
-    with open("data/cards.csv", newline="", encoding="utf8") as csvfile:
-        reader = csv.reader(csvfile, delimiter="|")
-        for event, combat, side_str, category_str in reader:
-            if Side[side_str] == side and CardCategory[category_str] in categories:
-                card = Card(event, combat, Side[side_str], CardCategory[category_str])
-                deck.append(card)
-    random.shuffle(deck)
-    return deck
+    def neighbors(self, region: Region) -> list[Region]:
+        return self._regions[region]
 
+    def reachable_regions(self, start: Region, distance: int) -> set[Region]:
+        return self._reachable_region_search(distance, {start}, {start})
 
-def init_region_map() -> RegionMap:
-    regions: RegionMap = RegionMap()
-    neighbors: dict[str, list[str]] = {}
-    with open("data/worldmap.csv", newline="", encoding="utf8") as csvfile:
-        reader = csv.reader(csvfile, delimiter="|")
-        for (
-            name,
-            neighbor_str,
-            nation_str,
-            settlement_str,
-            regulars_str,
-            elites_str,
-            leaders_str,
-        ) in reader:
-            nation = None if nation_str == "None" else Nation[nation_str.upper()]
-            settlement = (
-                None if settlement_str == "None" else Settlement[settlement_str.upper()]
-            )
-            region = Region(name, [], nation, settlement, army=None)
-            region.army = init_army(
-                int(regulars_str), int(elites_str), int(leaders_str), nation, region
-            )
-            neighbors[name] = neighbor_str.split(",")
-            regions.insert(region)
-    for name, region in regions.regions_by_name.items():
-        region.neighbors = [regions.with_name(neighbor) for neighbor in neighbors[name]]
-    return regions
+    def _reachable_region_search(
+        self, distance: int, search: set[Region], reached: set[Region]
+    ) -> set[Region]:
+        if distance == 0:
+            return reached
 
-
-def init_army(
-    regulars: int, elites: int, leaders: int, nation: Optional[Nation], region: Region
-) -> Optional[Army]:
-    army = None
-    if regulars > 0 or elites > 0 or leaders > 0:
-        # This only occurs in Osgiliath - which has Gondor units.
-        nation = Nation.GONDOR if nation is None else nation
-        army = Army(
-            Side.FREE if nation in NATION_SIDE[Side.FREE] else Side.SHADOW, region
-        )
-        for _ in range(regulars):
-            army.units.append(ArmyUnit(UnitType.REGULAR, nation))
-        for _ in range(elites):
-            army.units.append(ArmyUnit(UnitType.ELITE, nation))
-        for _ in range(leaders):
-            army.units.append(ArmyUnit(UnitType.LEADER, nation))
-    return army
-
-
-def init_player(side: Side) -> "PlayerState":
-    return PlayerState(
-        Agent(side.name, random_strategy),
-        side,
-        init_deck(side, {CardCategory.CHARACTER}),
-        init_deck(side, {CardCategory.ARMY, CardCategory.MUSTER}),
-        4 if side == Side.FREE else 7,
-    )
+        next_search = {
+            neighbor
+            for region in search
+            for neighbor in self.neighbors(region)
+            if neighbor not in reached
+        }
+        reached |= next_search
+        return self._reachable_region_search(distance - 1, next_search, reached)
 
 
 @dataclass
-class PlayerState:  # pylint: disable=too-many-instance-attributes
-    agent: Agent
-    side: Side
-    character_deck: deque[Card]
-    strategy_deck: deque[Card]
-    max_dice: int
+class Fellowship:
+    guide: Character
+    location: Region
+    revealed: bool = False
+    progress: int = 0
+    corruption: int = 0
 
+
+@dataclass
+class PoliticalStatus:
+    disposition: int
+    active: bool
+
+    def is_at_war(self) -> bool:
+        return self.disposition == 0
+
+    def can_advance(self) -> bool:
+        if self.disposition > 1:
+            return True
+        if self.disposition == 1:
+            return self.active
+        return False
+
+
+@dataclass
+class HuntBox:
+    eyes: int = 0
+    character: int = 0
+
+
+class HuntPool:
+    def __init__(self):
+        self._pool: list[HuntTile] = []
+        self._discarded: list[HuntTile] = []
+
+    def add_tile(self, tile: HuntTile) -> None:
+        self._pool.append(tile)
+
+    def draw(self) -> HuntTile:
+        return random.choice(self._pool)
+
+    def discard(self, tile: HuntTile) -> None:
+        self._pool.remove(tile)
+        self._discarded.append(tile)
+
+    def remove(self, tile: HuntTile) -> None:
+        self._pool.remove(tile)
+
+
+@dataclass
+class PublicPlayerState:  # pylint: disable=too-many-instance-attributes
+    starting_dice: int
+    elven_rings: int
+    character_deck_size: int
+    strategy_deck_size: int
+    character_deck_played: list[Card] = field(default_factory=list)
+    strategy_deck_played: list[Card] = field(default_factory=list)
     dice: Counter[DieResult] = field(default_factory=Counter)
-    hand: list[Card] = field(default_factory=list)
     victory_points: int = 0
 
-    def dice_count(self) -> int:
-        # TODO This can be player.dice.total() when mypy supports python 3.10
-        return sum(self.dice.values())
+
+@dataclass
+class PrivatePlayerState:
+    character_deck: list[Card]
+    strategy_deck: list[Card]
+    hand: list[Card] = field(default_factory=list)
 
 
 @dataclass
 class GameState:  # pylint: disable=too-many-instance-attributes
-    regions: RegionMap = field(default_factory=init_region_map)
-    reinforcements: dict[Nation, list[int]] = field(
-        default_factory=lambda: deepcopy(INITIAL_REINFORCEMENTS)
+    def __init__(self):
+        self.regions: RegionMap = init_region_map()
+        self.armies: list[ArmyUnit] = init_armies(self.regions)
+        self.characters: dict[CharacterID, Character] = init_characters()
+        self.reinforcements: dict[Nation, dict[UnitRank, int]] = init_reinforcements()
+        self.politics: dict[Nation, PoliticalStatus] = init_politics()
+        self.hunt_pool: HuntPool = init_hunt_pool()
+        self.hunt_box = HuntBox()
+        self.fellowship = Fellowship(
+            self.characters[INITIAL_GUIDE_ID], self.regions.get_region(FELLOWSHIP_START)
+        )
+        self.free_player: PublicPlayerState = init_public_player_state(Side.FREE)
+        self.shadow_player: PublicPlayerState = init_public_player_state(Side.SHADOW)
+
+
+def init_region_map() -> RegionMap:
+    class RegionData(NamedTuple):
+        name: str
+        neighbors: list[str]
+        nation: str
+        settlement: str
+
+    regions: RegionMap = RegionMap()
+    region_data: list[RegionData] = []
+
+    with open("data/worldmap.csv", newline="", encoding="utf8") as csvfile:
+        reader = csv.reader(csvfile, delimiter="|")
+        for name, neighbors, nation, settlement, _, _, _ in reader:
+            region_data.append(
+                RegionData(
+                    name, neighbors.split(","), nation.upper(), settlement.upper()
+                )
+            )
+
+    for data in region_data:
+        nation = None if data.nation == "NONE" else Nation[data.nation]
+        match data.settlement:
+            case "NONE":
+                settlement = None
+                is_fortification = False
+            case "FORTIFICATION":
+                settlement = None
+                is_fortification = True
+            case _:
+                settlement = Settlement[data.settlement]
+                is_fortification = False
+
+        region = Region(data.name, nation, settlement, is_fortification)
+        regions.add_region(region)
+
+    for data in region_data:
+        from_region = regions.get_region(data.name)
+        for neighbor in data.neighbors:
+            regions.add_connection(from_region, regions.get_region(neighbor))
+
+    return regions
+
+
+def init_armies(regions: RegionMap) -> list[ArmyUnit]:
+    armies: list[ArmyUnit] = []
+
+    with open("data/worldmap.csv", newline="", encoding="utf8") as csvfile:
+        reader = csv.reader(csvfile, delimiter="|")
+        for name, _, _, _, regulars, elites, leaders in reader:
+            unit_counts = {
+                UnitRank.REGULAR: int(regulars),
+                UnitRank.ELITE: int(elites),
+                UnitRank.LEADER: int(leaders),
+            }
+            if any(count > 0 for count in unit_counts.values()):
+                region = regions.get_region(name)
+                nation = region.nation if region.nation else Nation.GONDOR
+                units = [
+                    ArmyUnit(region, rank, nation)
+                    for rank, count in unit_counts.items()
+                    for _ in range(count)
+                ]
+                armies.extend(units)
+
+    return armies
+
+
+def init_characters() -> dict[CharacterID, Character]:
+    characters: dict[CharacterID, Character] = {}
+
+    with open("data/characters.csv", newline="", encoding="utf8") as csvfile:
+        reader = csv.reader(csvfile, delimiter="|")
+        for character_id, location_str, character_type, level, leadership in reader:
+            character = Character(
+                IN_FELLOWSHIP if location_str == "IN_FELLOWSHIP" else IN_REINFORCEMENTS,
+                CharacterID[character_id],
+                CharacterType[character_type],
+                int(level),
+                int(leadership),
+            )
+            characters[character.id] = character
+
+    return characters
+
+
+def init_reinforcements() -> dict[Nation, dict[UnitRank, int]]:
+    reinforcements: dict[Nation, dict[UnitRank, int]] = {}
+
+    with open("data/reinforcements.csv", newline="", encoding="utf8") as csvfile:
+        reader = csv.reader(csvfile, delimiter="|")
+        for nation, regulars, elites, leaders in reader:
+            reinforcements[Nation[nation]] = {
+                UnitRank.REGULAR: int(regulars),
+                UnitRank.ELITE: int(elites),
+                UnitRank.LEADER: int(leaders),
+            }
+
+    return reinforcements
+
+
+def init_politics() -> dict[Nation, PoliticalStatus]:
+    politics: dict[Nation, PoliticalStatus] = {}
+
+    with open("data/politics.csv", newline="", encoding="utf8") as csvfile:
+        reader = csv.reader(csvfile, delimiter="|")
+        for nation, disposition, active in reader:
+            political_status = PoliticalStatus(int(disposition), active == "active")
+            politics[Nation[nation]] = political_status
+
+    return politics
+
+
+def init_hunt_pool() -> HuntPool:
+    hunt_pool = HuntPool()
+
+    with open("data/hunt.csv", newline="", encoding="utf8") as csvfile:
+        reader = csv.reader(csvfile, delimiter="|")
+        for corruption, reveal in reader:
+            tile = HuntTile(int(corruption), reveal == "REVEAL", None)
+            hunt_pool.add_tile(tile)
+
+    return hunt_pool
+
+
+def init_public_player_state(player_side: Side) -> PublicPlayerState:
+    starting_dice = 4 if player_side == Side.FREE else 7
+    elven_rings = 3 if player_side == Side.FREE else 0
+    character_deck_size = 0
+    strategy_deck_size = 0
+
+    with open("data/cards.csv", newline="", encoding="utf8") as csvfile:
+        reader = csv.reader(csvfile, delimiter="|")
+        for _, _, side, category in reader:
+            if Side[side] == player_side:
+                if CardCategory[category] == CardCategory.CHARACTER:
+                    character_deck_size += 1
+                else:
+                    strategy_deck_size += 1
+
+    return PublicPlayerState(
+        starting_dice, elven_rings, character_deck_size, strategy_deck_size
     )
 
-    fellowship: Fellowship = field(default_factory=init_fellowship)
-    elven_rings: ElvenRings = field(default_factory=ElvenRings)
-    politics: dict[Nation, PoliticalStatus] = field(default_factory=init_politics)
 
-    free_player: PlayerState = field(default_factory=lambda: init_player(Side.FREE))
-    shadow_player: PlayerState = field(default_factory=lambda: init_player(Side.SHADOW))
-    players: tuple[PlayerState, PlayerState] = field(init=False)
+def init_private_player_state(player_side: Side) -> PrivatePlayerState:
+    character_deck: list[Card] = []
+    strategy_deck: list[Card] = []
 
-    hunt_box_eyes: int = 0
-    hunt_box_character: int = 0
-    hunt_pool: HuntPool = field(default_factory=lambda: HuntPool(INITIAL_HUNT_TILES))
+    with open("data/cards.csv", newline="", encoding="utf8") as csvfile:
+        reader = csv.reader(csvfile, delimiter="|")
+        for event, combat, side, category in reader:
+            if Side[side] == player_side:
+                card = Card(event, combat, Side[side], CardCategory[category])
+                if card.category == CardCategory.CHARACTER:
+                    character_deck.append(card)
+                else:
+                    strategy_deck.append(card)
 
-    characters_mustered: set[Character] = field(default_factory=set)
-
-    def __post_init__(self) -> None:
-        self.fellowship.location = self.regions.with_name(INITIAL_FELLOWSHIP_LOCATION)
-        self.players = self.free_player, self.shadow_player
+    return PrivatePlayerState(character_deck, strategy_deck)
