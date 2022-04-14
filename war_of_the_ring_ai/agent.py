@@ -1,35 +1,39 @@
+from __future__ import annotations
+
 import random
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TypeVar
 
-if TYPE_CHECKING:
-    from war_of_the_ring_ai.game_requests import Request
+from war_of_the_ring_ai.game_data import GameData, PrivatePlayerData
+from war_of_the_ring_ai.game_states import State
 
-Strategy = Callable[["Request"], Any]
-
-
-def random_strategy(request: "Request") -> Any:
-    return random.choice(request.options)
+T = TypeVar("T")
 
 
-def human_strategy(request: "Request") -> Any:
-    print(f"{type(request).__name__}")
-    for i, choice in enumerate(request.options):
-        print(f"{i}: {choice}")
-    selection = int(input())
-    return request.options[selection]
+def random_agent(
+    state: State[T], _gd: GameData, _pd: PrivatePlayerData, options: list[T]
+) -> T:
+    print(type(state).__name__)
+    return random.choice(options)
 
 
-class Agent:  # pylint: disable=too-few-public-methods
-    def __init__(self, name: str, strategy: Strategy) -> None:
-        self.name: str = name
-        self.strategy: Strategy = strategy
+def human_agent(
+    state: State[T], _gd: GameData, player: PrivatePlayerData, options: list[T]
+) -> T:
+    print(type(state).__name__)
 
-    def response(self, request: "Request") -> Any:
-        request_name = type(request).__name__
-        if len(request.options) == 0:
-            raise ValueError(
-                f"Request {request_name} yielded no valid response options."
-            )
-        response = self.strategy(request)
-        print(f"<{self.name}> {request_name}: {response}")
-        return response
+    for i, option in enumerate(options):
+        print(f"{i}: {option}")
+
+    print("> ", end="")
+    choice = input()
+    while True:
+        match choice:
+            case "hand":
+                print(player.hand)
+            case choice if choice.isdigit() and 0 <= int(choice) < len(options):
+                return options[int(choice)]
+            case _:
+                print("Invalid")
+
+        print("> ", end="")
+        choice = input()

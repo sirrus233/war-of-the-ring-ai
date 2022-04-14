@@ -10,7 +10,7 @@ python = "^3.10"
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"
 pre-commit = "^2.16.0"
-pylint = "^2.12.2"
+pylint = "^2.13.5"
 pytest = "^7.1.1"
 pytest-cov = "^3.0.0"
 
@@ -32,7 +32,7 @@ disable = [
 ]
 
 [tool.pylint.basic]
-good-names = ["i", "id"]
+good-names = ["i", "x", "id"]
 [tool.pylint.miscellaneous]
 ignore-imports = "yes"
 notes = [

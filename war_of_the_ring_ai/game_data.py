@@ -7,22 +7,16 @@ from typing import NamedTuple
 from war_of_the_ring_ai.constants import (
     FELLOWSHIP_START,
     INITIAL_GUIDE_ID,
+    CardCategory,
+    CharacterID,
     CharacterType,
     DieResult,
-    UnitRank,
-)
-from war_of_the_ring_ai.game_objects import (
-    ArmyUnit,
-    Card,
-    CardCategory,
-    Character,
-    CharacterID,
-    HuntTile,
     Nation,
-    Region,
     Settlement,
     Side,
+    UnitRank,
 )
+from war_of_the_ring_ai.game_objects import ArmyUnit, Card, Character, HuntTile, Region
 
 IN_FELLOWSHIP = Region("Fellowship")
 IN_REINFORCEMENTS = Region("Reinforcements")
@@ -31,7 +25,7 @@ IN_MORDOR = Region("Mordor")
 
 
 class RegionMap:
-    def __init__(self):
+    def __init__(self) -> None:
         self._regions_by_name: dict[str, Region] = {}
         self._regions: dict[Region, list[Region]] = {}
 
@@ -101,7 +95,7 @@ class HuntBox:
 
 
 class HuntPool:
-    def __init__(self):
+    def __init__(self) -> None:
         self._pool: list[HuntTile] = []
         self._discarded: list[HuntTile] = []
 
@@ -120,27 +114,39 @@ class HuntPool:
 
 
 @dataclass
-class PublicPlayerState:  # pylint: disable=too-many-instance-attributes
+class PublicDeckData:
+    size: int
+    played: list[Card] = field(default_factory=list)
+    discarded: int = 0
+
+
+@dataclass
+class PublicPlayerData:
+    side: Side
     starting_dice: int
     elven_rings: int
-    character_deck_size: int
-    strategy_deck_size: int
-    character_deck_played: list[Card] = field(default_factory=list)
-    strategy_deck_played: list[Card] = field(default_factory=list)
+    character_deck: PublicDeckData
+    strategy_deck: PublicDeckData
     dice: Counter[DieResult] = field(default_factory=Counter)
     victory_points: int = 0
 
 
 @dataclass
-class PrivatePlayerState:
-    character_deck: list[Card]
-    strategy_deck: list[Card]
+class PrivateDeckData:
+    cards: list[Card]
+    discarded: list[Card] = field(default_factory=list)
+
+
+@dataclass
+class PrivatePlayerData:
+    character_deck: PrivateDeckData
+    strategy_deck: PrivateDeckData
     hand: list[Card] = field(default_factory=list)
 
 
 @dataclass
-class GameState:  # pylint: disable=too-many-instance-attributes
-    def __init__(self):
+class GameData:  # pylint: disable=too-many-instance-attributes
+    def __init__(self) -> None:
         self.regions: RegionMap = init_region_map()
         self.armies: list[ArmyUnit] = init_armies(self.regions)
         self.characters: dict[CharacterID, Character] = init_characters()
@@ -151,8 +157,17 @@ class GameState:  # pylint: disable=too-many-instance-attributes
         self.fellowship = Fellowship(
             self.characters[INITIAL_GUIDE_ID], self.regions.get_region(FELLOWSHIP_START)
         )
-        self.free_player: PublicPlayerState = init_public_player_state(Side.FREE)
-        self.shadow_player: PublicPlayerState = init_public_player_state(Side.SHADOW)
+        self.free_player: PublicPlayerData = init_public_player_state(Side.FREE)
+        self.shadow_player: PublicPlayerData = init_public_player_state(Side.SHADOW)
+        self.active_player: PublicPlayerData = self.free_player
+
+    @property
+    def inactive_player(self) -> PublicPlayerData:
+        return (
+            self.free_player
+            if self.active_player == self.shadow_player
+            else self.shadow_player
+        )
 
 
 def init_region_map() -> RegionMap:
@@ -175,19 +190,14 @@ def init_region_map() -> RegionMap:
             )
 
     for data in region_data:
-        nation = None if data.nation == "NONE" else Nation[data.nation]
-        match data.settlement:
-            case "NONE":
-                settlement = None
-                is_fortification = False
-            case "FORTIFICATION":
-                settlement = None
-                is_fortification = True
-            case _:
-                settlement = Settlement[data.settlement]
-                is_fortification = False
-
-        region = Region(data.name, nation, settlement, is_fortification)
+        region = Region(
+            name=data.name,
+            nation=None if data.nation == "NONE" else Nation[data.nation],
+            settlement=None
+            if data.settlement in ("NONE", "FORTIFICATION")
+            else Settlement[data.settlement],
+            is_fortification=data.settlement == "FORTIFICATION",
+        )
         regions.add_region(region)
 
     for data in region_data:
@@ -279,29 +289,29 @@ def init_hunt_pool() -> HuntPool:
     return hunt_pool
 
 
-def init_public_player_state(player_side: Side) -> PublicPlayerState:
+def init_public_player_state(player_side: Side) -> PublicPlayerData:
     starting_dice = 4 if player_side == Side.FREE else 7
     elven_rings = 3 if player_side == Side.FREE else 0
-    character_deck_size = 0
-    strategy_deck_size = 0
+    character_deck = PublicDeckData(size=0)
+    strategy_deck = PublicDeckData(size=0)
 
     with open("data/cards.csv", newline="", encoding="utf8") as csvfile:
         reader = csv.reader(csvfile, delimiter="|")
         for _, _, side, category in reader:
             if Side[side] == player_side:
                 if CardCategory[category] == CardCategory.CHARACTER:
-                    character_deck_size += 1
+                    character_deck.size += 1
                 else:
-                    strategy_deck_size += 1
+                    strategy_deck.size += 1
 
-    return PublicPlayerState(
-        starting_dice, elven_rings, character_deck_size, strategy_deck_size
+    return PublicPlayerData(
+        player_side, starting_dice, elven_rings, character_deck, strategy_deck
     )
 
 
-def init_private_player_state(player_side: Side) -> PrivatePlayerState:
-    character_deck: list[Card] = []
-    strategy_deck: list[Card] = []
+def init_private_player_state(player_side: Side) -> PrivatePlayerData:
+    character_deck = PrivateDeckData(cards=[])
+    strategy_deck = PrivateDeckData(cards=[])
 
     with open("data/cards.csv", newline="", encoding="utf8") as csvfile:
         reader = csv.reader(csvfile, delimiter="|")
@@ -309,8 +319,8 @@ def init_private_player_state(player_side: Side) -> PrivatePlayerState:
             if Side[side] == player_side:
                 card = Card(event, combat, Side[side], CardCategory[category])
                 if card.category == CardCategory.CHARACTER:
-                    character_deck.append(card)
+                    character_deck.cards.append(card)
                 else:
-                    strategy_deck.append(card)
+                    strategy_deck.cards.append(card)
 
-    return PrivatePlayerState(character_deck, strategy_deck)
+    return PrivatePlayerData(character_deck, strategy_deck)

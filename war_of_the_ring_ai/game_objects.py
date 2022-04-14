@@ -16,12 +16,12 @@ from war_of_the_ring_ai.constants import (
 )
 
 
-@dataclass(frozen=True)
+@dataclass
 class Placeable:
     location: Region
 
 
-@dataclass(frozen=True)
+@dataclass
 class ArmyUnit(Placeable):
     rank: UnitRank
     nation: Nation
@@ -29,8 +29,11 @@ class ArmyUnit(Placeable):
     def is_nazgul(self) -> bool:
         return self.rank == UnitRank.LEADER and self.nation == Nation.SAURON
 
+    def is_unit(self) -> bool:
+        return self.rank in (UnitRank.REGULAR, UnitRank.ELITE)
 
-@dataclass(frozen=True)
+
+@dataclass
 class Character(Placeable):
     id: CharacterID
     type: CharacterType
