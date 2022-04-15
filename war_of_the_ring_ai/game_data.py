@@ -2,14 +2,15 @@ import csv
 import random
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import NamedTuple
+from typing import Mapping, NamedTuple
 
 from war_of_the_ring_ai.constants import (
     FELLOWSHIP_START,
     INITIAL_GUIDE_ID,
-    CardCategory,
+    CardType,
     CharacterID,
     CharacterType,
+    DeckType,
     DieResult,
     Nation,
     Settlement,
@@ -125,8 +126,8 @@ class PublicPlayerData:
     side: Side
     starting_dice: int
     elven_rings: int
-    character_deck: PublicDeckData
-    strategy_deck: PublicDeckData
+    decks: Mapping[DeckType, PublicDeckData]
+    hand: list[DeckType] = field(default_factory=list)
     dice: Counter[DieResult] = field(default_factory=Counter)
     victory_points: int = 0
 
@@ -139,14 +140,20 @@ class PrivateDeckData:
 
 @dataclass
 class PrivatePlayerData:
-    character_deck: PrivateDeckData
-    strategy_deck: PrivateDeckData
+    decks: Mapping[DeckType, PrivateDeckData]
     hand: list[Card] = field(default_factory=list)
 
 
 @dataclass
+class PlayerData:
+    public: PublicPlayerData
+    private: PrivatePlayerData
+
+
+@dataclass
 class GameData:  # pylint: disable=too-many-instance-attributes
-    def __init__(self) -> None:
+    def __init__(self, free: PublicPlayerData, shadow: PublicPlayerData) -> None:
+        self.turn: int = 0
         self.regions: RegionMap = init_region_map()
         self.armies: list[ArmyUnit] = init_armies(self.regions)
         self.characters: dict[CharacterID, Character] = init_characters()
@@ -157,17 +164,23 @@ class GameData:  # pylint: disable=too-many-instance-attributes
         self.fellowship = Fellowship(
             self.characters[INITIAL_GUIDE_ID], self.regions.get_region(FELLOWSHIP_START)
         )
-        self.free_player: PublicPlayerData = init_public_player_state(Side.FREE)
-        self.shadow_player: PublicPlayerData = init_public_player_state(Side.SHADOW)
-        self.active_player: PublicPlayerData = self.free_player
+        self.players: Mapping[Side, PublicPlayerData] = {
+            Side.FREE: free,
+            Side.SHADOW: shadow,
+        }
+        self._active_side: Side = Side.FREE
 
     @property
-    def inactive_player(self) -> PublicPlayerData:
-        return (
-            self.free_player
-            if self.active_player == self.shadow_player
-            else self.shadow_player
-        )
+    def active_side(self) -> Side:
+        return self._active_side
+
+    @active_side.setter
+    def active_side(self, side: Side) -> None:
+        self._active_side = side
+
+    @property
+    def inactive_side(self) -> Side:
+        return Side.FREE if self.active_side == Side.SHADOW else Side.SHADOW
 
 
 def init_region_map() -> RegionMap:
@@ -289,38 +302,40 @@ def init_hunt_pool() -> HuntPool:
     return hunt_pool
 
 
-def init_public_player_state(player_side: Side) -> PublicPlayerData:
+def init_public_player_data(player_side: Side) -> PublicPlayerData:
     starting_dice = 4 if player_side == Side.FREE else 7
     elven_rings = 3 if player_side == Side.FREE else 0
-    character_deck = PublicDeckData(size=0)
-    strategy_deck = PublicDeckData(size=0)
+    decks = {
+        DeckType.CHARACTER: PublicDeckData(size=0),
+        DeckType.STRATEGY: PublicDeckData(size=0),
+    }
 
     with open("data/cards.csv", newline="", encoding="utf8") as csvfile:
         reader = csv.reader(csvfile, delimiter="|")
-        for _, _, side, category in reader:
+        for _, _, side, card_type in reader:
             if Side[side] == player_side:
-                if CardCategory[category] == CardCategory.CHARACTER:
-                    character_deck.size += 1
+                if CardType[card_type] == CardType.CHARACTER:
+                    decks[DeckType.CHARACTER].size += 1
                 else:
-                    strategy_deck.size += 1
+                    decks[DeckType.STRATEGY].size += 1
 
-    return PublicPlayerData(
-        player_side, starting_dice, elven_rings, character_deck, strategy_deck
-    )
+    return PublicPlayerData(player_side, starting_dice, elven_rings, decks)
 
 
-def init_private_player_state(player_side: Side) -> PrivatePlayerData:
-    character_deck = PrivateDeckData(cards=[])
-    strategy_deck = PrivateDeckData(cards=[])
+def init_private_player_data(player_side: Side) -> PrivatePlayerData:
+    decks = {
+        DeckType.CHARACTER: PrivateDeckData(cards=[]),
+        DeckType.STRATEGY: PrivateDeckData(cards=[]),
+    }
 
     with open("data/cards.csv", newline="", encoding="utf8") as csvfile:
         reader = csv.reader(csvfile, delimiter="|")
-        for event, combat, side, category in reader:
+        for event, combat, side, card_type in reader:
             if Side[side] == player_side:
-                card = Card(event, combat, Side[side], CardCategory[category])
-                if card.category == CardCategory.CHARACTER:
-                    character_deck.cards.append(card)
+                card = Card(event, combat, Side[side], CardType[card_type])
+                if card.type == CardType.CHARACTER:
+                    decks[DeckType.CHARACTER].cards.append(card)
                 else:
-                    strategy_deck.cards.append(card)
+                    decks[DeckType.STRATEGY].cards.append(card)
 
-    return PrivatePlayerData(character_deck, strategy_deck)
+    return PrivatePlayerData(decks)

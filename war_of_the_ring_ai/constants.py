@@ -54,7 +54,12 @@ class DieResult(Enum):
     WILL = auto()
 
 
-class CardCategory(Enum):
+class DeckType(Enum):
+    CHARACTER = auto()
+    STRATEGY = auto()
+
+
+class CardType(Enum):
     CHARACTER = auto()
     ARMY = auto()
     MUSTER = auto()
@@ -107,3 +112,5 @@ EYE_CORRUPTION_FLAG = 100
 SHELOB_CORRUPTION_FLAG = 200
 
 NAZGUL_LEVEL_FLAG = -1
+
+MAX_HAND_SIZE = 6

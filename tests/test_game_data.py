@@ -2,33 +2,37 @@ from typing import Iterable
 
 import pytest
 
-from war_of_the_ring_ai.constants import Nation, Side, UnitRank
+from war_of_the_ring_ai.constants import DeckType, Nation, Side, UnitRank
 from war_of_the_ring_ai.game_data import (
     GameData,
     PrivatePlayerData,
-    init_private_player_state,
+    init_private_player_data,
+    init_public_player_data,
 )
 
 
 @pytest.fixture(name="game")
 def fixture_state() -> Iterable[GameData]:
-    yield GameData()
+    yield GameData(
+        free=init_public_player_data(Side.FREE),
+        shadow=init_public_player_data(Side.SHADOW),
+    )
 
 
 @pytest.fixture(name="free")
 def fixture_private_free_state() -> Iterable[PrivatePlayerData]:
-    yield init_private_player_state(Side.FREE)
+    yield init_private_player_data(Side.FREE)
 
 
 @pytest.fixture(name="shadow")
 def fixture_private_shadow_state() -> Iterable[PrivatePlayerData]:
-    yield init_private_player_state(Side.SHADOW)
+    yield init_private_player_data(Side.SHADOW)
 
 
 def test_deck_sizes(game: GameData) -> None:
-    for player in (game.free_player, game.shadow_player):
-        assert player.character_deck.size == 24
-        assert player.strategy_deck.size == 24
+    for player in game.players.values():
+        for deck in DeckType:
+            assert player.decks[deck].size == 24
 
 
 def test_all_cards_exist_in_decks(
@@ -36,10 +40,10 @@ def test_all_cards_exist_in_decks(
 ) -> None:
     all_cards: set[str] = set()
     all_decks = [
-        free.character_deck,
-        free.strategy_deck,
-        shadow.character_deck,
-        shadow.strategy_deck,
+        free.decks[DeckType.CHARACTER],
+        free.decks[DeckType.STRATEGY],
+        shadow.decks[DeckType.CHARACTER],
+        shadow.decks[DeckType.STRATEGY],
     ]
     for deck in all_decks:
         for card in deck.cards:

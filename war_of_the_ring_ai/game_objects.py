@@ -6,7 +6,7 @@ from typing import Optional
 from war_of_the_ring_ai.constants import (
     EYE_CORRUPTION_FLAG,
     SHELOB_CORRUPTION_FLAG,
-    CardCategory,
+    CardType,
     CharacterID,
     CharacterType,
     Nation,
@@ -54,7 +54,7 @@ class Card:
     event_name: str
     combat_name: str
     side: Side
-    category: CardCategory
+    type: CardType
 
 
 @dataclass(frozen=True)
