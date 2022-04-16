@@ -6,7 +6,7 @@ from war_of_the_ring_ai.game_data import (
     init_private_player_data,
     init_public_player_data,
 )
-from war_of_the_ring_ai.game_states import GameContext, StateMachine, TurnStart
+from war_of_the_ring_ai.game_states import DrawPhase, GameContext, state_machine
 
 
 def main() -> None:
@@ -28,8 +28,7 @@ def main() -> None:
         agents={Side.FREE: human_agent, Side.SHADOW: random_agent},
     )
 
-    machine = StateMachine(context, initial=TurnStart)
-    machine.start()
+    state_machine(context, initial=DrawPhase(context))
 
 
 if __name__ == "__main__":

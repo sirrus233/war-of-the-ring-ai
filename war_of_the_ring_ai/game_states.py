@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, Mapping, Optional, Type, TypeAlias, TypeVar
+from typing import Any, Callable, Generic, Mapping, Optional, TypeAlias, TypeVar
 
-from war_of_the_ring_ai.activities import discard, draw
 from war_of_the_ring_ai.constants import MAX_HAND_SIZE, DeckType, Side
 from war_of_the_ring_ai.game_data import GameData, PlayerData, PrivatePlayerData
 from war_of_the_ring_ai.game_objects import Card
@@ -61,55 +61,71 @@ class GameContext:
     agents: Mapping[Side, Agent[Any]]
 
 
-class StateMachine:
-    def __init__(self, context: GameContext, initial: Type[State[Any]]) -> None:
-        self.context = context
-        self.state = initial(context)
-        self.running = False
+def state_machine(context: GameContext, initial: State[Any]) -> None:
+    state = initial
+    running = True
 
-    def start(self) -> None:
-        self.running = True
+    while running:
+        player = context.players[context.game.active_side]
+        agent = context.agents[context.game.active_side]
 
-        while self.running:
-            player = self.context.players[self.context.game.active_side]
-            agent = self.context.agents[self.context.game.active_side]
+        if isinstance(state, SimpleState):
+            choice = None
+        else:
+            request = state.request()
+            if not request:
+                raise ValueError(f"Reached state {state} with no options.")
+            choice = agent(state, context.game, player.private, request)
 
-            if isinstance(self.state, SimpleState):
-                choice = None
-            else:
-                request = self.state.request()
-                if not request:
-                    raise ValueError(f"Reached state {self.state} with no options.")
-                choice = agent(self.state, self.context.game, player.private, request)
+        state.mutate(choice)
 
-            self.state.mutate(choice)
-
-            next_state = self.state.next()
-            if next_state is not None:
-                self.state = next_state
-            else:
-                self.stop()
-
-    def stop(self) -> None:
-        self.running = False
+        next_state = state.next()
+        if next_state is not None:
+            state = next_state
+        else:
+            running = False
 
 
-class TurnStart(SimpleState):
+class DrawPhase(SimpleState):
     def mutate(self, response: None) -> None:
         self.context.game.turn += 1
-        for side in Side:
-            player = self.context.players[side]
-            for deck_type in (DeckType.CHARACTER, DeckType.STRATEGY):
-                draw(player, deck_type)
+        self.context.game.active_side = Side.SHADOW
+        state_machine(self.context, Draw(self.context, 1, 1))
+        self.context.game.active_side = Side.FREE
+        state_machine(self.context, Draw(self.context, 1, 1))
 
     def next(self) -> Optional[State[Any]]:
-        for side in Side:
-            player = self.context.players[side]
-            if len(player.private.hand) > MAX_HAND_SIZE:
-                self.context.game.active_side = side
-                StateMachine(self.context, Discard).start()
-
         return self
+
+
+class Draw(SimpleState):
+    def __init__(
+        self, context: GameContext, character_draws: int = 0, strategy_draws: int = 0
+    ) -> None:
+        super().__init__(context)
+        self.character_draws = character_draws
+        self.strategy_draws = strategy_draws
+
+    def mutate(self, response: None) -> None:
+        def draw(player: PlayerData, deck: DeckType) -> None:
+            if player.private.decks[deck].cards:
+                card = random.choice(player.private.decks[deck].cards)
+                player.private.decks[deck].cards.remove(card)
+                player.private.hand.append(card)
+
+                player.public.decks[deck].size -= 1
+                player.public.hand.append(deck)
+
+        for _ in range(self.character_draws):
+            draw(self.active_player, DeckType.CHARACTER)
+
+        for _ in range(self.strategy_draws):
+            draw(self.active_player, DeckType.STRATEGY)
+
+    def next(self) -> Optional[State[Any]]:
+        if len(self.active_player.private.hand) > MAX_HAND_SIZE:
+            return Discard(self.context)
+        return None
 
 
 class Discard(State[Card]):
@@ -117,7 +133,14 @@ class Discard(State[Card]):
         return self.active_player.private.hand
 
     def mutate(self, response: Card) -> None:
-        discard(self.active_player, response)
+        card = response
+        deck = DeckType.CHARACTER if card.type.CHARACTER else DeckType.STRATEGY
+
+        self.active_player.private.hand.remove(card)
+        self.active_player.private.decks[deck].discarded.append(card)
+
+        self.active_player.public.hand.remove(deck)
+        self.active_player.public.decks[deck].discarded -= 1
 
     def next(self) -> Optional[State[Any]]:
         if len(self.active_player.private.hand) > MAX_HAND_SIZE:
