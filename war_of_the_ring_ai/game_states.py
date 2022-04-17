@@ -1,15 +1,31 @@
+# pylint: disable=useless-return
+
 from __future__ import annotations
 
 import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, Mapping, Optional, TypeAlias, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Mapping,
+    Optional,
+    Type,
+    TypeAlias,
+    TypeVar,
+    Union,
+)
 
 from war_of_the_ring_ai.constants import MAX_HAND_SIZE, DeckType, Side
 from war_of_the_ring_ai.game_data import GameData, PlayerData, PrivatePlayerData
-from war_of_the_ring_ai.game_objects import Card
+from war_of_the_ring_ai.game_objects import Card, Region
 
 T = TypeVar("T")
+NextState: TypeAlias = Type["State[Any]"]
+StateParams: TypeAlias = dict[str, Any]
+Transition = Union[None, NextState, tuple[NextState, StateParams]]
+Agent: TypeAlias = Callable[["State[T]", GameData, PrivatePlayerData, list[T]], T]
 
 
 class State(Generic[T], ABC):
@@ -21,11 +37,7 @@ class State(Generic[T], ABC):
         ...
 
     @abstractmethod
-    def mutate(self, response: T) -> None:
-        ...
-
-    @abstractmethod
-    def next(self) -> Optional[State[Any]]:
+    def transition(self, response: T) -> Transition:
         ...
 
     @property
@@ -38,7 +50,7 @@ class SimpleState(State[None], ABC):
         raise NotImplementedError("Simple states do not request a player's input.")
 
     @abstractmethod
-    def mutate(self, response: None) -> None:
+    def transition(self, response: None) -> Transition:
         ...
 
 
@@ -47,11 +59,8 @@ class BinaryChoice(State[bool], ABC):
         return [True, False]
 
     @abstractmethod
-    def mutate(self, response: bool) -> None:
+    def transition(self, response: bool) -> Transition:
         ...
-
-
-Agent: TypeAlias = Callable[[State[T], GameData, PrivatePlayerData, list[T]], T]
 
 
 @dataclass
@@ -61,8 +70,10 @@ class GameContext:
     agents: Mapping[Side, Agent[Any]]
 
 
-def state_machine(context: GameContext, initial: State[Any]) -> None:
-    state = initial
+def state_machine(
+    context: GameContext, initial: NextState, params: Optional[StateParams] = None
+) -> None:
+    state = initial(context, **params) if params else initial(context)
     running = True
 
     while running:
@@ -70,32 +81,41 @@ def state_machine(context: GameContext, initial: State[Any]) -> None:
         agent = context.agents[context.game.active_side]
 
         if isinstance(state, SimpleState):
-            choice = None
+            response = None
         else:
             request = state.request()
             if not request:
                 raise ValueError(f"Reached state {state} with no options.")
-            choice = agent(state, context.game, player.private, request)
+            response = agent(state, context.game, player.private, request)
 
-        state.mutate(choice)
+        transition = state.transition(response)
 
-        next_state = state.next()
-        if next_state is not None:
-            state = next_state
-        else:
+        # TODO Uncomment after fix for https://github.com/python/mypy/issues/12533
+        # match transition:
+        #     case None:
+        #         running = False
+        #     case next_state, params:
+        #         state = next_state(context, **params)
+        #     case next_state:
+        #         state = next_state(context)
+        if transition is None:
             running = False
+        elif isinstance(transition, tuple):
+            next_state, params = transition
+            state = next_state(**params)
+        else:
+            state = transition(context)
 
 
 class DrawPhase(SimpleState):
-    def mutate(self, response: None) -> None:
+    def transition(self, response: None) -> Transition:
         self.context.game.turn += 1
         self.context.game.active_side = Side.SHADOW
-        state_machine(self.context, Draw(self.context, 1, 1))
+        state_machine(self.context, Draw, {"character_draws": 1, "strategy_draws": 1})
         self.context.game.active_side = Side.FREE
-        state_machine(self.context, Draw(self.context, 1, 1))
+        state_machine(self.context, Draw, {"character_draws": 1, "strategy_draws": 1})
 
-    def next(self) -> Optional[State[Any]]:
-        return self
+        return FellowshipPhase
 
 
 class Draw(SimpleState):
@@ -106,7 +126,7 @@ class Draw(SimpleState):
         self.character_draws = character_draws
         self.strategy_draws = strategy_draws
 
-    def mutate(self, response: None) -> None:
+    def transition(self, response: None) -> Transition:
         def draw(player: PlayerData, deck: DeckType) -> None:
             if player.private.decks[deck].cards:
                 card = random.choice(player.private.decks[deck].cards)
@@ -122,9 +142,8 @@ class Draw(SimpleState):
         for _ in range(self.strategy_draws):
             draw(self.active_player, DeckType.STRATEGY)
 
-    def next(self) -> Optional[State[Any]]:
         if len(self.active_player.private.hand) > MAX_HAND_SIZE:
-            return Discard(self.context)
+            return Discard
         return None
 
 
@@ -132,7 +151,7 @@ class Discard(State[Card]):
     def request(self) -> list[Card]:
         return self.active_player.private.hand
 
-    def mutate(self, response: Card) -> None:
+    def transition(self, response: Card) -> Transition:
         card = response
         deck = DeckType.CHARACTER if card.type.CHARACTER else DeckType.STRATEGY
 
@@ -142,7 +161,60 @@ class Discard(State[Card]):
         self.active_player.public.hand.remove(deck)
         self.active_player.public.decks[deck].discarded -= 1
 
-    def next(self) -> Optional[State[Any]]:
         if len(self.active_player.private.hand) > MAX_HAND_SIZE:
-            return self
+            return Discard
         return None
+
+
+class FellowshipPhase(SimpleState):
+    def transition(self, response: None) -> Transition:
+        state_machine(self.context, DeclareFellowship)
+        return HuntAllocationPhase
+
+
+class DeclareFellowship(BinaryChoice):
+    def transition(self, response: bool) -> Transition:
+        # TODO Handle ChangeGuide
+        yes = response
+        if yes:
+            return UpdateFellowshipLocation
+        return None
+
+
+class UpdateFellowshipLocation(State[Region]):
+    def request(self) -> list[Region]:
+        fellowship = self.context.game.fellowship
+        reachable = self.context.game.regions.reachable_regions(
+            fellowship.location, fellowship.progress
+        )
+        if fellowship.is_revealed:
+            # TODO Prevent declaring in enemy controlled locations
+            valid = [region for region in reachable if region]
+        else:
+            valid = reachable
+        return valid
+
+    def transition(self, response: Region) -> Transition:
+        self.context.game.fellowship.location = response
+        self.context.game.fellowship.progress = 0
+        return None
+
+
+class HuntAllocationPhase(SimpleState):
+    def transition(self, response: None) -> Transition:
+        return RollPhase
+
+
+class RollPhase(SimpleState):
+    def transition(self, response: None) -> Transition:
+        return ActionPhase
+
+
+class ActionPhase(SimpleState):
+    def transition(self, response: None) -> Transition:
+        return VictoryCheckPhase
+
+
+class VictoryCheckPhase(SimpleState):
+    def transition(self, response: None) -> Transition:
+        return DrawPhase

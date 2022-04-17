@@ -108,4 +108,4 @@ def test_region_search(game: GameData) -> None:
         )
     }
     actual_regions = game.regions.reachable_regions(start_region, distance)
-    assert expected_regions == actual_regions
+    assert expected_regions == set(actual_regions)

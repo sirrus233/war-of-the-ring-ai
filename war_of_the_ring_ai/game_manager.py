@@ -28,7 +28,7 @@ def main() -> None:
         agents={Side.FREE: human_agent, Side.SHADOW: random_agent},
     )
 
-    state_machine(context, initial=DrawPhase(context))
+    state_machine(context, initial=DrawPhase)
 
 
 if __name__ == "__main__":

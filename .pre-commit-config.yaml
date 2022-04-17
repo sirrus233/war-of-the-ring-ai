@@ -5,7 +5,7 @@
       - id: black
         args: ['--target-version', 'py310']
   - repo: 'https://gitlab.com/pycqa/flake8'
-    rev: '3.9.2'
+    rev: '4.0.1'
     hooks:
       - id: flake8
         args: ["--max-line-length=88"]

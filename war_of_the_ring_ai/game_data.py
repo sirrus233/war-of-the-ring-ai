@@ -45,8 +45,8 @@ class RegionMap:
     def neighbors(self, region: Region) -> list[Region]:
         return self._regions[region]
 
-    def reachable_regions(self, start: Region, distance: int) -> set[Region]:
-        return self._reachable_region_search(distance, {start}, {start})
+    def reachable_regions(self, start: Region, distance: int) -> list[Region]:
+        return list(self._reachable_region_search(distance, {start}, {start}))
 
     def _reachable_region_search(
         self, distance: int, search: set[Region], reached: set[Region]
@@ -68,7 +68,7 @@ class RegionMap:
 class Fellowship:
     guide: Character
     location: Region
-    revealed: bool = False
+    is_revealed: bool = False
     progress: int = 0
     corruption: int = 0
 
