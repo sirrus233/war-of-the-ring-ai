@@ -13,7 +13,9 @@ def random_agent(
     state: State[T], _gd: GameData, _pd: PrivatePlayerData, options: list[T]
 ) -> T:
     print(type(state).__name__)
-    return random.choice(options)
+    choice = random.choice(options)
+    print(f"Choice: {choice}")
+    return choice
 
 
 def human_agent(

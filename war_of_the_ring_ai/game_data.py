@@ -155,6 +155,7 @@ class GameData:  # pylint: disable=too-many-instance-attributes
     def __init__(self, free: PublicPlayerData, shadow: PublicPlayerData) -> None:
         self.turn: int = 0
         self.regions: RegionMap = init_region_map()
+        self.conquered: set[Region] = set()
         self.armies: list[ArmyUnit] = init_armies(self.regions)
         self.characters: dict[CharacterID, Character] = init_characters()
         self.reinforcements: dict[Nation, dict[UnitRank, int]] = init_reinforcements()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import random
 from abc import ABC, abstractmethod
+from collections import Counter
 from dataclasses import dataclass
 from typing import (
     Any,
@@ -17,9 +18,29 @@ from typing import (
     Union,
 )
 
-from war_of_the_ring_ai.constants import MAX_HAND_SIZE, DeckType, Side
-from war_of_the_ring_ai.game_data import GameData, PlayerData, PrivatePlayerData
-from war_of_the_ring_ai.game_objects import Card, Region
+from war_of_the_ring_ai.constants import (
+    FREE_ACTION_DIE,
+    FREE_HEROES,
+    FREE_NATIONS,
+    FREE_VP_GOAL,
+    MAX_HAND_SIZE,
+    SHADOW_ACTION_DIE,
+    SHADOW_HEROES,
+    SHADOW_VP_GOAL,
+    DeckType,
+    DieResult,
+    Settlement,
+    Side,
+)
+from war_of_the_ring_ai.game_data import (
+    IN_CASUALTIES,
+    IN_FELLOWSHIP,
+    IN_REINFORCEMENTS,
+    GameData,
+    PlayerData,
+    PrivatePlayerData,
+)
+from war_of_the_ring_ai.game_objects import Card, Character, Region
 
 T = TypeVar("T")
 NextState: TypeAlias = Type["State[Any]"]
@@ -168,31 +189,52 @@ class Discard(State[Card]):
 
 class FellowshipPhase(SimpleState):
     def transition(self, response: None) -> Transition:
-        state_machine(self.context, DeclareFellowship)
+        fellowship = self.context.game.fellowship
+
+        def fellowship_can_heal() -> bool:
+            return (
+                fellowship.location.nation in FREE_NATIONS
+                and fellowship.location.settlement
+                in (Settlement.CITY, Settlement.STRONGHOLD)
+                and fellowship.location not in self.context.game.conquered
+            )
+
+        def fellowship_can_change_guide() -> bool:
+            characters = self.context.game.characters.values()
+            return any(
+                character is not fellowship.guide
+                and character.location == IN_FELLOWSHIP
+                and character.level >= fellowship.guide.level
+                for character in characters
+            )
+
+        if fellowship.progress > 0:
+            state_machine(self.context, AskDeclareFellowship)
+
+        if fellowship_can_heal():
+            fellowship.corruption = max(0, fellowship.corruption - 1)
+
+        if fellowship_can_change_guide():
+            state_machine(self.context, AskChangeGuide)
+
+        self.context.game.active_side = Side.SHADOW
         return HuntAllocationPhase
 
 
-class DeclareFellowship(BinaryChoice):
+class AskDeclareFellowship(BinaryChoice):
     def transition(self, response: bool) -> Transition:
-        # TODO Handle ChangeGuide
-        yes = response
-        if yes:
-            return UpdateFellowshipLocation
+        if response:
+            return DeclareFellowship
         return None
 
 
-class UpdateFellowshipLocation(State[Region]):
+class DeclareFellowship(State[Region]):
     def request(self) -> list[Region]:
         fellowship = self.context.game.fellowship
         reachable = self.context.game.regions.reachable_regions(
             fellowship.location, fellowship.progress
         )
-        if fellowship.is_revealed:
-            # TODO Prevent declaring in enemy controlled locations
-            valid = [region for region in reachable if region]
-        else:
-            valid = reachable
-        return valid
+        return reachable
 
     def transition(self, response: Region) -> Transition:
         self.context.game.fellowship.location = response
@@ -200,21 +242,90 @@ class UpdateFellowshipLocation(State[Region]):
         return None
 
 
-class HuntAllocationPhase(SimpleState):
-    def transition(self, response: None) -> Transition:
+class AskChangeGuide(BinaryChoice):
+    def transition(self, response: bool) -> Transition:
+        if response:
+            return ChangeGuide
+        return None
+
+
+class ChangeGuide(State[Character]):
+    def request(self) -> list[Character]:
+        return [
+            character
+            for character in self.context.game.characters.values()
+            if character is not self.context.game.fellowship.guide
+            and character.location == IN_FELLOWSHIP
+            and character.level >= self.context.game.fellowship.guide.level
+        ]
+
+    def transition(self, response: Character) -> Transition:
+        self.context.game.fellowship.guide = response
+        return None
+
+
+class HuntAllocationPhase(State[int]):
+    def request(self) -> list[int]:
+        characters = self.context.game.characters.values()
+        minimum = 0 if self.context.game.hunt_box.character == 0 else 1
+        maximum = sum(
+            1 for character in characters if character.location == IN_FELLOWSHIP
+        )
+        return list(range(minimum, maximum + 1))
+
+    def transition(self, response: int) -> Transition:
+        hunt_box = self.context.game.hunt_box
+        hunt_box.character = 0
+        hunt_box.eyes = response
         return RollPhase
 
 
 class RollPhase(SimpleState):
     def transition(self, response: None) -> Transition:
+        heroes = {Side.FREE: FREE_HEROES, Side.SHADOW: SHADOW_HEROES}
+        dice = {Side.FREE: FREE_ACTION_DIE, Side.SHADOW: SHADOW_ACTION_DIE}
+
+        def extra_dice(side: Side) -> int:
+            extra = 0
+            for hero_id in heroes[side]:
+                hero = self.context.game.characters[hero_id]
+                if hero.location not in (IN_REINFORCEMENTS, IN_CASUALTIES):
+                    extra += 1
+            return extra
+
+        player = self.context.players[Side.FREE]
+        dice_count = player.public.starting_dice + extra_dice(Side.FREE)
+        player.public.dice = Counter(
+            [random.choice(dice[Side.FREE]) for _ in range(dice_count)]
+        )
+
+        player = self.context.players[Side.SHADOW]
+        hunt_box = self.context.game.hunt_box
+        dice_count = (
+            player.public.starting_dice + extra_dice(Side.SHADOW) - hunt_box.eyes
+        )
+        player.public.dice = Counter(
+            [random.choice(dice[Side.SHADOW]) for _ in range(dice_count)]
+        )
+        hunt_box.eyes += player.public.dice[DieResult.EYE]
+        player.public.dice.pop(DieResult.EYE, None)
+
         return ActionPhase
 
 
 class ActionPhase(SimpleState):
     def transition(self, response: None) -> Transition:
+        # TODO Actions
+        print(self.context.players[Side.FREE].public.dice)
+        print(self.context.players[Side.SHADOW].public.dice)
         return VictoryCheckPhase
 
 
 class VictoryCheckPhase(SimpleState):
     def transition(self, response: None) -> Transition:
+        # TODO Victory state
+        if self.context.players[Side.SHADOW].public.victory_points >= SHADOW_VP_GOAL:
+            return None
+        if self.context.players[Side.FREE].public.victory_points >= FREE_VP_GOAL:
+            return None
         return DrawPhase
