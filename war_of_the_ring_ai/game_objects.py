@@ -40,7 +40,7 @@ class Character(Placeable):
     level: int
     leadership: int
 
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return f"{self.id.name} ({self.location.name})"
 
 
@@ -58,6 +58,9 @@ class Card:
     combat_name: str
     side: Side
     type: CardType
+
+    def __repr__(self) -> str:
+        return f"{self.type.name[0]}|{self.event_name}|{self.combat_name}"
 
 
 @dataclass(frozen=True)

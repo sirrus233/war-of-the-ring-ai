@@ -31,7 +31,8 @@ def human_agent(
     while True:
         match choice:
             case "hand":
-                print(player.hand)
+                for card in player.hand:
+                    print(card)
             case choice if choice.isdigit() and 0 <= int(choice) < len(options):
                 return options[int(choice)]
             case _:
