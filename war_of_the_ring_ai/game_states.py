@@ -18,28 +18,26 @@ from typing import (
     Union,
 )
 
+from war_of_the_ring_ai.activities import (
+    discard,
+    draw,
+    fellowship_can_heal,
+    maximum_hunt_dice,
+    minimum_hunt_dice,
+    rollable_dice,
+    valid_guides,
+)
 from war_of_the_ring_ai.constants import (
     FREE_ACTION_DIE,
-    FREE_HEROES,
-    FREE_NATIONS,
     FREE_VP_GOAL,
     MAX_HAND_SIZE,
     SHADOW_ACTION_DIE,
-    SHADOW_HEROES,
     SHADOW_VP_GOAL,
     DeckType,
     DieResult,
-    Settlement,
     Side,
 )
-from war_of_the_ring_ai.game_data import (
-    IN_CASUALTIES,
-    IN_FELLOWSHIP,
-    IN_REINFORCEMENTS,
-    GameData,
-    PlayerData,
-    PrivatePlayerData,
-)
+from war_of_the_ring_ai.game_data import GameData, PlayerData, PrivatePlayerData
 from war_of_the_ring_ai.game_objects import Card, Character, Region
 
 T = TypeVar("T")
@@ -148,15 +146,6 @@ class Draw(SimpleState):
         self.strategy_draws = strategy_draws
 
     def transition(self, response: None) -> Transition:
-        def draw(player: PlayerData, deck: DeckType) -> None:
-            if player.private.decks[deck].cards:
-                card = random.choice(player.private.decks[deck].cards)
-                player.private.decks[deck].cards.remove(card)
-                player.private.hand.append(card)
-
-                player.public.decks[deck].size -= 1
-                player.public.hand.append(deck)
-
         for _ in range(self.character_draws):
             draw(self.active_player, DeckType.CHARACTER)
 
@@ -173,14 +162,7 @@ class Discard(State[Card]):
         return self.active_player.private.hand
 
     def transition(self, response: Card) -> Transition:
-        card = response
-        deck = DeckType.CHARACTER if card.type.CHARACTER else DeckType.STRATEGY
-
-        self.active_player.private.hand.remove(card)
-        self.active_player.private.decks[deck].discarded.append(card)
-
-        self.active_player.public.hand.remove(deck)
-        self.active_player.public.decks[deck].discarded -= 1
+        discard(self.active_player, response)
 
         if len(self.active_player.private.hand) > MAX_HAND_SIZE:
             return Discard
@@ -191,31 +173,14 @@ class FellowshipPhase(SimpleState):
     def transition(self, response: None) -> Transition:
         fellowship = self.context.game.fellowship
 
-        def fellowship_can_heal() -> bool:
-            return (
-                fellowship.location.nation in FREE_NATIONS
-                and fellowship.location.settlement
-                in (Settlement.CITY, Settlement.STRONGHOLD)
-                and fellowship.location not in self.context.game.conquered
-            )
-
-        def fellowship_can_change_guide() -> bool:
-            characters = self.context.game.characters.values()
-            return any(
-                character is not fellowship.guide
-                and character.location == IN_FELLOWSHIP
-                and character.level >= fellowship.guide.level
-                for character in characters
-            )
-
         if fellowship.progress > 0:
             state_machine(self.context, AskDeclareFellowship)
 
-        if fellowship_can_heal():
+        if fellowship_can_heal(self.context.game):
             fellowship.corruption = max(0, fellowship.corruption - 1)
 
-        if fellowship_can_change_guide():
-            state_machine(self.context, AskChangeGuide)
+        if len(valid_guides(self.context.game)) > 1:
+            state_machine(self.context, AskSelectGuide)
 
         self.context.game.active_side = Side.SHADOW
         return HuntAllocationPhase
@@ -242,22 +207,16 @@ class DeclareFellowship(State[Region]):
         return None
 
 
-class AskChangeGuide(BinaryChoice):
+class AskSelectGuide(BinaryChoice):
     def transition(self, response: bool) -> Transition:
         if response:
-            return ChangeGuide
+            return SelectGuide
         return None
 
 
-class ChangeGuide(State[Character]):
+class SelectGuide(State[Character]):
     def request(self) -> list[Character]:
-        return [
-            character
-            for character in self.context.game.characters.values()
-            if character is not self.context.game.fellowship.guide
-            and character.location == IN_FELLOWSHIP
-            and character.level >= self.context.game.fellowship.guide.level
-        ]
+        return valid_guides(self.context.game)
 
     def transition(self, response: Character) -> Transition:
         self.context.game.fellowship.guide = response
@@ -266,12 +225,12 @@ class ChangeGuide(State[Character]):
 
 class HuntAllocationPhase(State[int]):
     def request(self) -> list[int]:
-        characters = self.context.game.characters.values()
-        minimum = 0 if self.context.game.hunt_box.character == 0 else 1
-        maximum = sum(
-            1 for character in characters if character.location == IN_FELLOWSHIP
+        return list(
+            range(
+                minimum_hunt_dice(self.context.game),
+                maximum_hunt_dice(self.context.game) + 1,
+            )
         )
-        return list(range(minimum, maximum + 1))
 
     def transition(self, response: int) -> Transition:
         hunt_box = self.context.game.hunt_box
@@ -282,33 +241,20 @@ class HuntAllocationPhase(State[int]):
 
 class RollPhase(SimpleState):
     def transition(self, response: None) -> Transition:
-        heroes = {Side.FREE: FREE_HEROES, Side.SHADOW: SHADOW_HEROES}
         dice = {Side.FREE: FREE_ACTION_DIE, Side.SHADOW: SHADOW_ACTION_DIE}
+        for side in Side:
+            player = self.context.players[side]
+            die = dice[side]
+            player.public.dice = Counter(
+                [
+                    random.choice(die)
+                    for _ in range(rollable_dice(player, self.context.game))
+                ]
+            )
 
-        def extra_dice(side: Side) -> int:
-            extra = 0
-            for hero_id in heroes[side]:
-                hero = self.context.game.characters[hero_id]
-                if hero.location not in (IN_REINFORCEMENTS, IN_CASUALTIES):
-                    extra += 1
-            return extra
-
-        player = self.context.players[Side.FREE]
-        dice_count = player.public.starting_dice + extra_dice(Side.FREE)
-        player.public.dice = Counter(
-            [random.choice(dice[Side.FREE]) for _ in range(dice_count)]
-        )
-
-        player = self.context.players[Side.SHADOW]
-        hunt_box = self.context.game.hunt_box
-        dice_count = (
-            player.public.starting_dice + extra_dice(Side.SHADOW) - hunt_box.eyes
-        )
-        player.public.dice = Counter(
-            [random.choice(dice[Side.SHADOW]) for _ in range(dice_count)]
-        )
-        hunt_box.eyes += player.public.dice[DieResult.EYE]
-        player.public.dice.pop(DieResult.EYE, None)
+        shadow_player = self.context.players[Side.SHADOW]
+        self.context.game.hunt_box.eyes += shadow_player.public.dice[DieResult.EYE]
+        shadow_player.public.dice.pop(DieResult.EYE, None)
 
         return ActionPhase
 

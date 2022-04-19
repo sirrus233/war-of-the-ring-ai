@@ -19,10 +19,10 @@ from war_of_the_ring_ai.constants import (
 )
 from war_of_the_ring_ai.game_objects import ArmyUnit, Card, Character, HuntTile, Region
 
-IN_FELLOWSHIP = Region("Fellowship")
-IN_REINFORCEMENTS = Region("Reinforcements")
-IN_CASUALTIES = Region("Casualties")
-IN_MORDOR = Region("Mordor")
+FELLOWSHIP = Region("Fellowship")
+REINFORCEMENTS = Region("Reinforcements")
+CASUALTIES = Region("Casualties")
+MORDOR = Region("Mordor")
 
 
 class RegionMap:
@@ -71,6 +71,7 @@ class Fellowship:
     is_revealed: bool = False
     progress: int = 0
     corruption: int = 0
+    moved: bool = False
 
 
 @dataclass
@@ -253,7 +254,7 @@ def init_characters() -> dict[CharacterID, Character]:
         reader = csv.reader(csvfile, delimiter="|")
         for character_id, location_str, character_type, level, leadership in reader:
             character = Character(
-                IN_FELLOWSHIP if location_str == "IN_FELLOWSHIP" else IN_REINFORCEMENTS,
+                FELLOWSHIP if location_str == "IN_FELLOWSHIP" else REINFORCEMENTS,
                 CharacterID[character_id],
                 CharacterType[character_type],
                 int(level),
