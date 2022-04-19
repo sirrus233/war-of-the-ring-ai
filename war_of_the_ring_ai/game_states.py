@@ -254,6 +254,7 @@ class RollPhase(SimpleState):
         self.context.game.hunt_box.eyes += shadow_player.public.dice[DieResult.EYE]
         shadow_player.public.dice.pop(DieResult.EYE, None)
 
+        self.context.game.active_side = Side.FREE
         return ActionPhase
 
 
