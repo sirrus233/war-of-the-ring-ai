@@ -261,8 +261,12 @@ class RollPhase(SimpleState):
 class ActionPhase(SimpleState):
     def transition(self, response: None) -> Transition:
         # TODO Actions
-        print(self.context.players[Side.FREE].public.dice)
-        print(self.context.players[Side.SHADOW].public.dice)
+        for player in self.context.players.values():
+            print(f"{player.public.side.name}: ", end="")
+            for die, count in player.public.dice.items():
+                for _ in range(count):
+                    print(die.name[0], end=" ")
+            print()
         return VictoryCheckPhase
 
 
