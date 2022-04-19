@@ -246,10 +246,8 @@ class RollPhase(SimpleState):
             player = self.context.players[side]
             die = dice[side]
             player.public.dice = Counter(
-                [
-                    random.choice(die)
-                    for _ in range(rollable_dice(player, self.context.game))
-                ]
+                random.choice(die)
+                for _ in range(rollable_dice(player, self.context.game))
             )
 
         shadow_player = self.context.players[Side.SHADOW]
