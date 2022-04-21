@@ -2,17 +2,13 @@ import random
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Callable, Generic, Optional, TypeAlias, TypeVar
+from typing import Any, Callable, Generic, Optional, Protocol, TypeAlias, TypeVar
 
-A = TypeVar("A")
-B = TypeVar("B")
-C = TypeVar("C")
-D = TypeVar("D")
-
-T = TypeVar("T", covariant=True)
-U = TypeVar("U", covariant=True)
-U_inv = TypeVar("U_inv")
-V = TypeVar("V", covariant=True)
+T = TypeVar("T")
+T1 = TypeVar("T1")
+T2 = TypeVar("T2")
+T3 = TypeVar("T3")
+T4 = TypeVar("T4")
 
 
 class TransitionType(Enum):
@@ -20,35 +16,40 @@ class TransitionType(Enum):
     PUSH = auto()
 
 
-State: TypeAlias = Callable[[T], U]  # TODO: Use a Protocol to allow variadic signature
+State: TypeAlias = Callable[[T1], T2]
 
-TransitionCondition: TypeAlias = Callable[[T], bool]  # TODO Make variadic. See State.
+TransitionCondition: TypeAlias = Callable[[T], bool]
 
 
 @dataclass(frozen=True)
-class Transition(Generic[T, U_inv, V]):
+class Transition(Generic[T1, T2, T3]):
     type: TransitionType
-    start: State[T, U_inv]
-    end: State[U_inv, V]
-    condition: TransitionCondition[U_inv] = lambda _: True
+    start: State[T1, T2]
+    end: State[T2, T3]
+    condition: TransitionCondition[T2] = lambda _: True
 
 
-TransitionsMapping: TypeAlias = dict[State[T, U], list[Transition[T, U, V]]]
+TransitionsMapping: TypeAlias = dict[State[T1, T2], list[Transition[T1, T2, T3]]]
+
+
+class TransitionsMappingP(Protocol):
+    def __getitem__(self, item: State[T1, T2]) -> list[Transition[T1, T2, object]]:
+        ...
 
 
 class StateMachine:
     def __init__(
         self,
-        initial: State[A, B],
-        initial_payload: Optional[A] = None,
-        final: Optional[State[A, B]] = None,
+        initial: State[T1, T2],
+        initial_payload: Optional[T1] = None,
+        final: Optional[State[T3, T4]] = None,
     ) -> None:
         self.initial_payload = initial_payload
         self.state = [initial]
         self.final_state = final
-        self.transitions: TransitionsMapping[T, U, V] = defaultdict(list)
+        self.transitions: TransitionsMapping[Any, Any, Any] = defaultdict(list)
 
-    def add_transition(self, transition: Transition[T, U, V]) -> None:
+    def add_transition(self, transition: Transition[Any, Any, Any]) -> None:
         self.transitions[transition.start].append(transition)
 
     @property
@@ -57,6 +58,7 @@ class StateMachine:
 
     def next_state(self, payload: Any) -> None:
         transitions = self.transitions[self.current_state]
+
         valid_transitions = [
             transition for transition in transitions if transition.condition(payload)
         ]
