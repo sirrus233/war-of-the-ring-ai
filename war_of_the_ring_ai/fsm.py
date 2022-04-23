@@ -2,8 +2,9 @@ import random
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Callable, Generic, Optional, TypeAlias, TypeVar
+from typing import Any, Callable, Generic, Optional, TypeAlias, TypeVar, cast
 
+S = TypeVar("S")
 T = TypeVar("T")
 U = TypeVar("U")
 
@@ -17,7 +18,7 @@ State: TypeAlias = Callable[[T], U]
 TransitionCondition: TypeAlias = Callable[[T], bool]
 
 
-class StateMachine:
+class StateMachine(Generic[S]):
     @dataclass(frozen=True)
     class Transition(Generic[T]):
         type: TransitionType
@@ -31,7 +32,7 @@ class StateMachine:
         self,
         initial: State[Any, T],
         initial_payload: Optional[T] = None,
-        final: Optional[State[Any, Any]] = None,
+        final: Optional[State[Any, S]] = None,
     ) -> None:
         self.initial_payload = initial_payload
         self.state = [initial]
@@ -79,11 +80,15 @@ class StateMachine:
             case TransitionType.PUSH:
                 self.state.append(transition.end)
 
-    def start(self) -> None:
+    def start(self) -> S:
         payload = self.initial_payload
+
         while self.current_state is not self.final_state:
             payload = self.current_state(payload)
             self.next_state(payload)
+
+        # Guaranteed to be in a non-null final state, which has a return type of S
+        return cast(S, self.current_state(payload))
 
 
 def start_turn(payload: tuple[int, int]) -> tuple[int, int]:
@@ -98,11 +103,11 @@ def roll_die(payload: tuple[int, int]) -> tuple[int, int]:
 
 def report_score(payload: tuple[int, int]) -> int:
     print(f"Game ended on turn {payload[0]} with score {payload[1]}")
-    return 0
+    return payload[1]
 
 
-def end_game(_: int) -> None:
-    pass
+def end_game(payload: int) -> int:
+    return payload
 
 
 def is_game_over(payload: tuple[int, int]) -> bool:
