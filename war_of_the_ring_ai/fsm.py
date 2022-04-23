@@ -2,13 +2,10 @@ import random
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Callable, Generic, Optional, Protocol, TypeAlias, TypeVar
+from typing import Any, Callable, Generic, Optional, TypeAlias, TypeVar
 
 T = TypeVar("T")
-T1 = TypeVar("T1")
-T2 = TypeVar("T2")
-T3 = TypeVar("T3")
-T4 = TypeVar("T4")
+U = TypeVar("U")
 
 
 class TransitionType(Enum):
@@ -16,41 +13,40 @@ class TransitionType(Enum):
     PUSH = auto()
 
 
-State: TypeAlias = Callable[[T1], T2]
-
+State: TypeAlias = Callable[[T], U]
 TransitionCondition: TypeAlias = Callable[[T], bool]
 
 
-@dataclass(frozen=True)
-class Transition(Generic[T1, T2, T3]):
-    type: TransitionType
-    start: State[T1, T2]
-    end: State[T2, T3]
-    condition: TransitionCondition[T2] = lambda _: True
-
-
-TransitionsMapping: TypeAlias = dict[State[T1, T2], list[Transition[T1, T2, T3]]]
-
-
-class TransitionsMappingP(Protocol):
-    def __getitem__(self, item: State[T1, T2]) -> list[Transition[T1, T2, object]]:
-        ...
-
-
 class StateMachine:
+    @dataclass(frozen=True)
+    class Transition(Generic[T]):
+        type: TransitionType
+        start: State[Any, T]
+        end: State[T, Any]
+        condition: TransitionCondition[T] = lambda _: True
+
+    TransitionsMapping: TypeAlias = dict[State[Any, T], list[Transition[T]]]
+
     def __init__(
         self,
-        initial: State[T1, T2],
-        initial_payload: Optional[T1] = None,
-        final: Optional[State[T3, T4]] = None,
+        initial: State[Any, T],
+        initial_payload: Optional[T] = None,
+        final: Optional[State[Any, Any]] = None,
     ) -> None:
         self.initial_payload = initial_payload
         self.state = [initial]
         self.final_state = final
-        self.transitions: TransitionsMapping[Any, Any, Any] = defaultdict(list)
+        self.transitions: StateMachine.TransitionsMapping[Any] = defaultdict(list)
 
-    def add_transition(self, transition: Transition[Any, Any, Any]) -> None:
-        self.transitions[transition.start].append(transition)
+    def add_transition(
+        self,
+        transition_type: TransitionType,
+        start: State[Any, T],
+        end: State[T, Any],
+        condition: TransitionCondition[T] = lambda _: True,
+    ) -> None:
+        transition = StateMachine.Transition[T](transition_type, start, end, condition)
+        self.transitions[start].append(transition)
 
     @property
     def current_state(self) -> State[Any, Any]:
@@ -105,11 +101,11 @@ def report_score(payload: tuple[int, int]) -> int:
     return 0
 
 
-def end_game(_: None) -> None:
+def end_game(_: int) -> None:
     pass
 
 
-def is_game_over(payload: tuple[int, bool]) -> bool:
+def is_game_over(payload: tuple[int, int]) -> bool:
     return payload[1] >= 20
 
 
@@ -117,13 +113,9 @@ def isnt_game_over(payload: tuple[int, int]) -> bool:
     return payload[1] < 20
 
 
-Transition(TransitionType.FIRE, roll_die, start_turn, isnt_game_over)
-Transition(TransitionType.FIRE, roll_die, report_score, is_game_over)
-Transition(TransitionType.FIRE, report_score, end_game)
-
 sm = StateMachine(initial=start_turn, initial_payload=(0, 0), final=end_game)
-sm.add_transition(Transition(TransitionType.FIRE, start_turn, roll_die))
-sm.add_transition(Transition(TransitionType.FIRE, roll_die, start_turn, isnt_game_over))
-sm.add_transition(Transition(TransitionType.FIRE, roll_die, report_score, is_game_over))
-sm.add_transition(Transition(TransitionType.FIRE, report_score, end_game))
+sm.add_transition(TransitionType.FIRE, start_turn, roll_die)
+sm.add_transition(TransitionType.FIRE, roll_die, start_turn, isnt_game_over)
+sm.add_transition(TransitionType.FIRE, roll_die, report_score, is_game_over)
+sm.add_transition(TransitionType.FIRE, report_score, end_game)
 sm.start()
