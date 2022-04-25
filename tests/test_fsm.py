@@ -45,14 +45,19 @@ PAUSED = State[GameContext]()
 ###
 # Events
 ###
+
+
+@dataclass(frozen=True)
 class Next(EmptyEvent):
     ...
 
 
+@dataclass(frozen=True)
 class Roll(Event[int]):
     ...
 
 
+@dataclass(frozen=True)
 class Pause(EmptyEvent):
     ...
 
@@ -60,12 +65,14 @@ class Pause(EmptyEvent):
 # This event has an associated transition, but is never sent. When the state machine
 # receives an event it should check if this transition should be followed before
 # moving on to the next transition in the list.
+@dataclass(frozen=True)
 class UncommonEvent(EmptyEvent):
     ...
 
 
 # This event is sent to the state machine, but has no associated transition. Such
 # events should be ignored.
+@dataclass(frozen=True)
 class UnmodeledEvent(EmptyEvent):
     ...
 
