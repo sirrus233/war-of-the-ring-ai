@@ -1,5 +1,6 @@
-from collections import defaultdict
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import (
     Any,
@@ -8,104 +9,99 @@ from typing import (
     Generic,
     Iterable,
     Optional,
+    Type,
     TypeAlias,
     TypeVar,
 )
 
-# General use type vars
 T = TypeVar("T")
 U = TypeVar("U")
 
-# StateMachine type vars
-Tstate = TypeVar("Tstate", bound=Enum)
-Tevent = TypeVar("Tevent", bound=Enum)
-Tpayload = TypeVar("Tpayload")
-Tpayloadtype = TypeVar("Tpayloadtype")
-Tcontext = TypeVar("Tcontext")
 
-Tout = TypeVar("Tout")
+@dataclass(frozen=True)
+class Event(Generic[T]):
+    payload: T
 
 
 @dataclass(frozen=True)
-class Event(Generic[Tevent, Tpayloadtype]):
-    id: Tevent
-    payload: Optional[Tpayloadtype] = None
+class EmptyEvent(Event[None]):
+    payload: None = None
 
 
 class TransitionType(Enum):
     FIRE = auto()
     PUSH = auto()
+    POP = auto()
 
 
-TransitionGuard: TypeAlias = Callable[[Tstate, Tcontext, Tpayload], bool]
-TransitionAction: TypeAlias = Callable[[Tstate, Tcontext, Tpayload], None]
+TransitionGuard: TypeAlias = Callable[[T, U], bool]
+TransitionAction: TypeAlias = Callable[[T, U], None]
 
 
 @dataclass(frozen=True)
-class Transition(Generic[Tevent, Tpayload, Tstate, Tcontext]):
-    event: Tevent
+class Transition(Generic[T, U]):
+    event: Type[Event[U]]
     type: TransitionType
-    next: Tstate
-    guard: TransitionGuard[Tstate, Tcontext, Tpayload]
-    action: TransitionAction[Tstate, Tcontext, Tpayload]
+    next: Optional[State[T]] = None
+    guard: TransitionGuard[T, U] = lambda _context, _param: True
+    action: TransitionAction[T, U] = lambda _context, _param: None
+
+    def __post_init__(self) -> None:
+        if self.next is None and self.type is not TransitionType.POP:
+            raise ValueError(
+                "Transition must define a next state unless TransitionType is POP."
+            )
 
 
-class StateMachine(Generic[Tstate, Tevent, Tcontext]):
+@dataclass(frozen=True)
+class State(Generic[T]):
+    transitions: list[Transition[T, Any]] = field(default_factory=list)
+    on_enter: Callable[[T], None] = lambda _context: None
+    on_exit: Callable[[T], None] = lambda _context: None
+
+    def add_transition(self, transition: Transition[T, Any]) -> None:
+        self.transitions.append(transition)
+
+
+class StateMachine(Generic[T]):
     def __init__(
-        self, initial: Tstate, context: Tcontext, final: Iterable[Tstate] = ()
+        self, context: T, initial: State[T], final: Iterable[State[T]] = ()
     ) -> None:
-        self.state = [initial]
-        self.final_states = set(final)
         self.context = context
-        # Nested mapping of State -> Event -> Seq(Transition)
-        self.transitions: defaultdict[
-            Tstate, defaultdict[Tevent, list[Transition[Tevent, Any, Tstate, Tcontext]]]
-        ] = defaultdict(lambda: defaultdict(list))
+        self.state = [initial]
+        self.final_states = final
 
     @property
-    def current_state(self) -> Tstate:
+    def current_state(self) -> State[T]:
         return self.state[-1]
 
-    def add_transition(
-        self,
-        start: Tstate,
-        event: Tevent,
-        transition_type: TransitionType,
-        next_state: Tstate,
-        guard: Optional[TransitionGuard[Tstate, Tcontext, Tpayload]] = None,
-        action: Optional[TransitionAction[Tstate, Tcontext, Tpayload]] = None,
-    ) -> None:
-        def default_guard(_1: Tstate, _2: Tcontext, _3: Tpayload) -> bool:
-            return True
+    def _handle(self, event: Event[Any]) -> None:
+        for transition in self.current_state.transitions:
+            if isinstance(event, transition.event):
+                if transition.guard(self.context, event.payload):
+                    transition.action(self.context, event.payload)
+                    self.current_state.on_exit(self.context)
+                    match transition.type:
+                        case TransitionType.FIRE:
+                            assert transition.next is not None
+                            self.state.pop()
+                            self.state.append(transition.next)
+                        case TransitionType.PUSH:
+                            assert transition.next is not None
+                            self.state.append(transition.next)
+                        case TransitionType.POP:  # pragma: no branch
+                            self.state.pop()
+                    self.current_state.on_enter(self.context)
+                    return
 
-        def default_action(_1: Tstate, _2: Tcontext, _3: Tpayload) -> None:
-            return None
-
-        if guard is None:
-            guard = default_guard
-
-        if action is None:
-            action = default_action
-
-        transition = Transition(event, transition_type, next_state, guard, action)
-        self.transitions[start][transition.event].append(transition)
-
-    def _handle(self, event: Event[Tevent, Any]) -> None:
-        transitions = self.transitions[self.current_state][event.id]
-        for transition in transitions:
-            if transition.guard(self.current_state, self.context, event.payload):
-                transition.action(self.current_state, self.context, event.payload)
-                match transition.type:
-                    case TransitionType.FIRE:
-                        self.state.pop()
-                        self.state.append(transition.next)
-                    case TransitionType.PUSH:
-                        self.state.append(transition.next)
-                break
-
-    def start(self) -> Generator[None, Event[Tevent, Any], Tstate]:
+    def _start(self) -> Generator[None, Event[Any], State[T]]:
         while self.current_state not in self.final_states:
             event = yield
             self._handle(event)
 
         return self.current_state
+
+    def start(self) -> Generator[None, Event[Any], State[T]]:
+        machine = self._start()
+        next(machine)
+        return machine

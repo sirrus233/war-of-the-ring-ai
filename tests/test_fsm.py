@@ -1,75 +1,144 @@
 from dataclasses import dataclass
-from enum import Enum, auto
+from typing import Iterable
 
-from war_of_the_ring_ai.fsm import Event, StateMachine, TransitionType
+import pytest
+
+from war_of_the_ring_ai.fsm import (
+    EmptyEvent,
+    Event,
+    State,
+    StateMachine,
+    Transition,
+    TransitionType,
+)
 
 
-def test_fsm() -> None:
-    @dataclass
-    class GameContext:
-        turn: int = 1
-        score: int = 0
+@dataclass
+class GameContext:
+    turn: int = 1
+    score: int = 0
 
-    class GameState(Enum):
-        TURN_START = auto()
-        COMPUTE_SCORE = auto()
-        GAME_OVER = auto()
 
-    class GameEvent(Enum):
-        NEXT = auto()
-        ROLL_DIE = auto()
+###
+# Action and Guard functions
+###
+def next_turn(context: GameContext) -> None:
+    context.turn += 1
 
-    def roll_die(state: GameState, context: GameContext, payload: int) -> None:
-        context.score += payload
 
-    def next_turn(state: GameState, context: GameContext, payload: None) -> None:
-        context.turn += 1
+def roll_die(context: GameContext, roll: int) -> None:
+    context.score += roll
 
-    def report_final_score(
-        state: GameState, context: GameContext, payload: None
-    ) -> None:
-        print(f"Game ended with score {context.score} on turn {context.turn}")
 
-    def is_game_over(state: GameState, context: GameContext, payload: None) -> bool:
-        return context.score > 20
+def is_game_over(context: GameContext, _param: None) -> bool:
+    return context.score > 20
 
-    context = GameContext()
 
-    sm = StateMachine[GameState, GameEvent, GameContext](
-        initial=GameState.TURN_START,
-        final=[GameState.GAME_OVER],
-        context=context,
-    )
-    sm.add_transition(
-        GameState.TURN_START,
-        GameEvent.ROLL_DIE,
-        TransitionType.FIRE,
-        GameState.COMPUTE_SCORE,
-        action=roll_die,
-    )
-    sm.add_transition(
-        GameState.COMPUTE_SCORE,
-        GameEvent.NEXT,
-        TransitionType.FIRE,
-        GameState.GAME_OVER,
-        guard=is_game_over,
-        action=report_final_score,
-    )
-    sm.add_transition(
-        GameState.COMPUTE_SCORE,
-        GameEvent.NEXT,
-        TransitionType.FIRE,
-        GameState.TURN_START,
-        action=next_turn,
-    )
-    gen = sm.start()
-    next(gen)
+###
+# States
+###
+TURN_START = State[GameContext](on_enter=next_turn)
+COMPUTE_SCORE = State[GameContext]()
+GAME_OVER = State[GameContext]()
+PAUSED = State[GameContext]()
+
+###
+# Events
+###
+class Next(EmptyEvent):
+    ...
+
+
+class Roll(Event[int]):
+    ...
+
+
+class Pause(EmptyEvent):
+    ...
+
+
+# This event has an associated transition, but is never sent. When the state machine
+# receives an event it should check if this transition should be followed before
+# moving on to the next transition in the list.
+class UncommonEvent(EmptyEvent):
+    ...
+
+
+# This event is sent to the state machine, but has no associated transition. Such
+# events should be ignored.
+class UnmodeledEvent(EmptyEvent):
+    ...
+
+
+###
+# Transitions
+###
+TURN_START.add_transition(
+    Transition(Roll, TransitionType.FIRE, COMPUTE_SCORE, action=roll_die)
+)
+TURN_START.add_transition(Transition(Pause, TransitionType.PUSH, PAUSED))
+
+COMPUTE_SCORE.add_transition(Transition(UncommonEvent, TransitionType.FIRE, GAME_OVER))
+COMPUTE_SCORE.add_transition(
+    Transition(Next, TransitionType.FIRE, GAME_OVER, guard=is_game_over)
+)
+COMPUTE_SCORE.add_transition(Transition(Next, TransitionType.FIRE, TURN_START))
+COMPUTE_SCORE.add_transition(Transition(Pause, TransitionType.PUSH, PAUSED))
+
+PAUSED.add_transition(Transition(Pause, TransitionType.POP))
+
+
+@pytest.fixture(name="machine")
+def fixture_state_machine() -> Iterable[StateMachine[GameContext]]:
+    yield StateMachine(GameContext(), initial=TURN_START, final=[GAME_OVER])
+
+
+@pytest.mark.parametrize(
+    "transition_type", [t for t in TransitionType if t is not TransitionType.POP]
+)
+def test_cannot_construct_invalid_transition(transition_type: TransitionType) -> None:
+    with pytest.raises(ValueError):
+        Transition(Next, transition_type)
+
+
+def test_only_sent_event_causes_transition(machine: StateMachine[GameContext]) -> None:
+    listener = machine.start()
+    listener.send(Roll(3))
+    listener.send(Next())
+    assert machine.current_state is TURN_START
+
+
+def test_unmodeled_events_are_ignored(machine: StateMachine[GameContext]) -> None:
+    listener = machine.start()
+    listener.send(UnmodeledEvent())
+    assert machine.current_state is TURN_START
+
+
+def test_hierarchical_state(machine: StateMachine[GameContext]) -> None:
+    listener = machine.start()
+    assert machine.current_state is TURN_START
+    listener.send(Pause())
+    assert machine.current_state is PAUSED
+    listener.send(Pause())
+    assert machine.current_state is TURN_START
+    listener.send(Roll(3))
+    assert machine.current_state is COMPUTE_SCORE
+    listener.send(Pause())
+    assert machine.current_state is PAUSED
+    listener.send(Pause())
+    assert machine.current_state is COMPUTE_SCORE
+
+
+def test_e2e(machine: StateMachine[GameContext]) -> None:
+    listener = machine.start()
+
     while True:
         try:
-            gen.send(Event(GameEvent.ROLL_DIE, "wom"))
-            gen.send(Event(GameEvent.NEXT))
+            listener.send(Roll(3))
+            listener.send(Next())
         except StopIteration:
             break
 
-    assert context.score == 21
-    assert context.turn == 7
+    assert machine.current_state is GAME_OVER
+    assert machine.context.score == 21
+    assert machine.context.turn == 7
