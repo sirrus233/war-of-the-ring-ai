@@ -1,16 +1,35 @@
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Any, Callable, Generic, Optional, Type, TypeAlias, TypeVar, cast
+from typing import (
+    Any,
+    Callable,
+    Generator,
+    Generic,
+    Iterable,
+    Optional,
+    TypeAlias,
+    TypeVar,
+)
 
 # General use type vars
 T = TypeVar("T")
 U = TypeVar("U")
 
 # StateMachine type vars
-Tmodel = TypeVar("Tmodel", bound=Enum)
-Tout = TypeVar("Tout")
+Tstate = TypeVar("Tstate", bound=Enum)
+Tevent = TypeVar("Tevent", bound=Enum)
+Tpayload = TypeVar("Tpayload")
+Tpayloadtype = TypeVar("Tpayloadtype")
 Tcontext = TypeVar("Tcontext")
+
+Tout = TypeVar("Tout")
+
+
+@dataclass(frozen=True)
+class Event(Generic[Tevent, Tpayloadtype]):
+    id: Tevent
+    payload: Optional[Tpayloadtype] = None
 
 
 class TransitionType(Enum):
@@ -18,81 +37,75 @@ class TransitionType(Enum):
     PUSH = auto()
 
 
-TransitionAction: TypeAlias = Callable[[T], U]
-TransitionGuard: TypeAlias = Callable[[T], bool]
+TransitionGuard: TypeAlias = Callable[[Tstate, Tcontext, Tpayload], bool]
+TransitionAction: TypeAlias = Callable[[Tstate, Tcontext, Tpayload], None]
 
 
-class StateMachine(Generic[Tmodel, Tout, Tcontext]):
-    @dataclass(frozen=True)
-    class Transition(Generic[T]):
-        type: TransitionType
-        start: Tmodel
-        end: Tmodel
-        guard: TransitionGuard[T] = lambda _: True
-        action: Optional[]
+@dataclass(frozen=True)
+class Transition(Generic[Tevent, Tpayload, Tstate, Tcontext]):
+    event: Tevent
+    type: TransitionType
+    next: Tstate
+    guard: TransitionGuard[Tstate, Tcontext, Tpayload]
+    action: TransitionAction[Tstate, Tcontext, Tpayload]
 
-    # TODO Docs
-    TransitionsMapping: TypeAlias = dict[Enum, list[Transition[Any]]]
-    # Current Hierarchical State, Context Vars, Next State Input
-    # TODO Docs
-    StateContext: TypeAlias = tuple[list[Enum], T, U]
 
-    def __init__(self, initial: Enum, context: Tcontext = None) -> None:
-        self.state: list[Enum] = [initial]
-        self.final_state: list[Enum] = []
-        self.transitions: StateMachine.TransitionsMapping = defaultdict(list)
+class StateMachine(Generic[Tstate, Tevent, Tcontext]):
+    def __init__(
+        self, initial: Tstate, context: Tcontext, final: Iterable[Tstate] = ()
+    ) -> None:
+        self.state = [initial]
+        self.final_states = set(final)
+        self.context = context
+        # Nested mapping of State -> Event -> Seq(Transition)
+        self.transitions: defaultdict[
+            Tstate, defaultdict[Tevent, list[Transition[Tevent, Any, Tstate, Tcontext]]]
+        ] = defaultdict(lambda: defaultdict(list))
 
     @property
-    def current_state(self) -> Enum:
+    def current_state(self) -> Tstate:
         return self.state[-1]
-
-    def add_state(self, state: Enum, final: Optional[bool] = False):
-
-        pass
 
     def add_transition(
         self,
+        start: Tstate,
+        event: Tevent,
         transition_type: TransitionType,
-        start: State[Any, T],
-        end: State[T, Any],
-        guard: TransitionGuard[T] = lambda _: True,
+        next_state: Tstate,
+        guard: Optional[TransitionGuard[Tstate, Tcontext, Tpayload]] = None,
+        action: Optional[TransitionAction[Tstate, Tcontext, Tpayload]] = None,
     ) -> None:
-        transition = StateMachine.Transition[T](transition_type, start, end, guard)
-        self.transitions[start].append(transition)
+        def default_guard(_1: Tstate, _2: Tcontext, _3: Tpayload) -> bool:
+            return True
 
-    def next_state(self, payload: Any) -> None:
-        transitions = self.transitions[self.current_state]
+        def default_action(_1: Tstate, _2: Tcontext, _3: Tpayload) -> None:
+            return None
 
-        valid_transitions = [
-            transition for transition in transitions if transition.guard(payload)
-        ]
+        if guard is None:
+            guard = default_guard
 
-        if len(valid_transitions) == 0:
-            raise ValueError(
-                f"No valid transitions from state {self.current_state.__name__}"
-            )
+        if action is None:
+            action = default_action
 
-        if len(valid_transitions) > 1:
-            raise ValueError(
-                f"Multiple valid transitions from state {self.current_state.__name__}. "
-                f"Transitions: {valid_transitions}"
-            )
+        transition = Transition(event, transition_type, next_state, guard, action)
+        self.transitions[start][transition.event].append(transition)
 
-        transition = valid_transitions[0]
+    def _handle(self, event: Event[Tevent, Any]) -> None:
+        transitions = self.transitions[self.current_state][event.id]
+        for transition in transitions:
+            if transition.guard(self.current_state, self.context, event.payload):
+                transition.action(self.current_state, self.context, event.payload)
+                match transition.type:
+                    case TransitionType.FIRE:
+                        self.state.pop()
+                        self.state.append(transition.next)
+                    case TransitionType.PUSH:
+                        self.state.append(transition.next)
+                break
 
-        match transition.type:
-            case TransitionType.FIRE:
-                self.state.pop()
-                self.state.append(transition.end)
-            case TransitionType.PUSH:
-                self.state.append(transition.end)
+    def start(self) -> Generator[None, Event[Tevent, Any], Tstate]:
+        while self.current_state not in self.final_states:
+            event = yield
+            self._handle(event)
 
-    def start(self) -> Tout:
-        payload = self.initial_payload
-
-        while self.current_state is not self.final_state:
-            payload = self.current_state(payload)
-            self.next_state(payload)
-
-        # Guaranteed to be in a non-null final state, which has a return type of S
-        return cast(Tout, self.current_state(payload))
+        return self.current_state
