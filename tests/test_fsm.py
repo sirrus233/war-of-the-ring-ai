@@ -89,33 +89,33 @@ def fixture_state_machine() -> Iterable[StateMachine[State, GameContext]]:
 
     machine.add_entry_action(State.TURN_START, incr_turn)
     machine.add_transition(
+        State.TURN_START,
         Roll,
         TransitionType.FIRE,
-        State.TURN_START,
         State.COMPUTE_SCORE,
         action=roll_die,
     )
-    machine.add_transition(Pause, TransitionType.PUSH, State.TURN_START, State.PAUSED)
+    machine.add_transition(State.TURN_START, Pause, TransitionType.PUSH, State.PAUSED)
 
     machine.add_transition(
-        UncommonEvent, TransitionType.FIRE, State.COMPUTE_SCORE, State.GAME_OVER
+        State.COMPUTE_SCORE, UncommonEvent, TransitionType.FIRE, State.GAME_OVER
     )
     machine.add_transition(
+        State.COMPUTE_SCORE,
         Next,
         TransitionType.FIRE,
-        State.COMPUTE_SCORE,
         State.GAME_OVER,
         guard=is_game_over,
     )
     machine.add_transition(
-        Next, TransitionType.FIRE, State.COMPUTE_SCORE, State.TURN_START
+        State.COMPUTE_SCORE, Next, TransitionType.FIRE, State.TURN_START
     )
     machine.add_transition(
-        Pause, TransitionType.PUSH, State.COMPUTE_SCORE, State.PAUSED
+        State.COMPUTE_SCORE, Pause, TransitionType.PUSH, State.PAUSED
     )
 
     machine.add_exit_action(State.PAUSED, incr_pause)
-    machine.add_transition(Pause, TransitionType.POP, State.PAUSED)
+    machine.add_transition(State.PAUSED, Pause, TransitionType.POP)
 
     yield machine
 
@@ -127,7 +127,7 @@ def test_cannot_construct_invalid_transition(
     machine: StateMachine[State, GameContext], transition_type: TransitionType
 ) -> None:
     with pytest.raises(ValueError):
-        machine.add_transition(Next, transition_type, State.TURN_START)
+        machine.add_transition(State.TURN_START, Next, transition_type)
 
 
 def test_only_sent_event_causes_transition(

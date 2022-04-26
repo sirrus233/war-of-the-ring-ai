@@ -42,9 +42,9 @@ ExitAction: TypeAlias = Callable[[T], None]
 
 @dataclass(frozen=True)
 class Transition(Generic[E, T, U]):
+    start: E
     event: type[Event[U]]
     type: TransitionType
-    start: E
     end: Optional[E]
     guard: TransitionGuard[T, U]
     action: TransitionAction[T, U]
@@ -71,9 +71,9 @@ class StateMachine(Generic[E, T]):
 
     def add_transition(  # pylint: disable=too-many-arguments
         self,
+        start: E,
         event: type[Event[U]],
         transition_type: TransitionType,
-        start: E,
         end: Optional[E] = None,
         guard: TransitionGuard[T, U] = lambda _context, _param: True,
         action: TransitionAction[T, U] = lambda _context, _param: None,
@@ -82,7 +82,7 @@ class StateMachine(Generic[E, T]):
             raise ValueError(
                 "Transition must define an end state unless TransitionType is POP."
             )
-        transition = Transition(event, transition_type, start, end, guard, action)
+        transition = Transition(start, event, transition_type, end, guard, action)
         self.transitions[transition.start].append(transition)
 
     def add_entry_action(self, state: E, action: EntryAction[T]) -> None:
@@ -99,23 +99,29 @@ class StateMachine(Generic[E, T]):
         for action in self.exit_actions[state]:
             action(self.context)
 
+    def _enter_state(self, new_state: E) -> None:
+        self.state.append(new_state)
+        self.perform_entry_actions(self.current_state())
+
+    def _exit_state(self) -> None:
+        self.perform_exit_actions(self.current_state())
+        self.state.pop()
+
     def _handle_event(self, event: Event[Any]) -> None:
         for transition in self.transitions[self.current_state()]:
             if isinstance(event, transition.event):
                 if transition.guard(self.context, event.payload):
                     transition.action(self.context, event.payload)
-                    self.perform_exit_actions(self.current_state())
                     match transition.type:
                         case TransitionType.FIRE:
                             assert transition.end is not None
-                            self.state.pop()
-                            self.state.append(transition.end)
+                            self._exit_state()
+                            self._enter_state(transition.end)
                         case TransitionType.PUSH:
                             assert transition.end is not None
-                            self.state.append(transition.end)
+                            self._enter_state(transition.end)
                         case TransitionType.POP:  # pragma: no branch
-                            self.state.pop()
-                    self.perform_entry_actions(self.current_state())
+                            self._exit_state()
                     return
 
     def _start(self) -> Generator[None, Event[Any], E]:
