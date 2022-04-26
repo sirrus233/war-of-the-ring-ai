@@ -148,6 +148,13 @@ def fixture_state_machine() -> Iterable[StateMachine[State, GameContext]]:
     yield machine
 
 
+def test_cannot_construct_non_parameterized_transition(
+    machine: StateMachine[State, GameContext]
+) -> None:
+    with pytest.raises(ValueError):
+        machine.add_transition(Transition(Next, TransitionType.FIRE, State.TURN_START))
+
+
 @pytest.mark.parametrize(
     "transition_type", [t for t in TransitionType if t is not TransitionType.POP]
 )
@@ -155,7 +162,13 @@ def test_cannot_construct_invalid_transition(
     machine: StateMachine[State, GameContext], transition_type: TransitionType
 ) -> None:
     with pytest.raises(ValueError):
-        machine.add_transition(Transition(Next, transition_type, State.TURN_START))
+        T = TypeVar("T")
+
+        @dataclass(frozen=True)
+        class GameTransition(Transition[State, GameContext, T]):
+            ...
+
+        machine.add_transition(GameTransition(Next, transition_type, State.TURN_START))
 
 
 def test_only_sent_event_causes_transition(

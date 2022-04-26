@@ -71,6 +71,8 @@ class StateMachine(Generic[E, T]):
         return self.state[-1]
 
     def add_transition(self, transition: Transition[E, T, Any]) -> None:
+        if type(transition) == Transition:
+            raise ValueError("Transition must be subclassed to specify payload type.")
         if transition.end is None and transition.type is not TransitionType.POP:
             raise ValueError(
                 "Transition must define a next state unless TransitionType is POP."
