@@ -9,7 +9,6 @@ from typing import (
     Generic,
     Iterable,
     Optional,
-    Type,
     TypeAlias,
     TypeVar,
 )
@@ -43,7 +42,7 @@ ExitAction: TypeAlias = Callable[[T], None]
 
 @dataclass(frozen=True)
 class Transition(Generic[E, T, U]):
-    event: Type[Event[U]]
+    event: type[Event[U]]
     type: TransitionType
     start: E
     end: Optional[E]
@@ -53,7 +52,7 @@ class Transition(Generic[E, T, U]):
 
 class StateMachine(Generic[E, T]):
     def __init__(
-        self, model: Type[E], context: T, initial: E, final: Iterable[E] = ()
+        self, model: type[E], context: T, initial: E, final: Iterable[E] = ()
     ) -> None:
         self.context = context
         self.state = [initial]
@@ -72,7 +71,7 @@ class StateMachine(Generic[E, T]):
 
     def add_transition(  # pylint: disable=too-many-arguments
         self,
-        event: Type[Event[U]],
+        event: type[Event[U]],
         transition_type: TransitionType,
         start: E,
         end: Optional[E] = None,
