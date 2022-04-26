@@ -77,6 +77,13 @@ class Casualty(Enum):
     RANDOM = auto()
 
 
+class Victory(Enum):
+    FPRV = auto()
+    FPMV = auto()
+    SPRV = auto()
+    SPMV = auto()
+
+
 FREE_NATIONS = (
     Nation.ELVES,
     Nation.DWARVES,

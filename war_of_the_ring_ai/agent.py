@@ -1,42 +1,53 @@
 from __future__ import annotations
 
 import random
+from abc import ABC, abstractmethod
 from typing import TypeVar
 
 from war_of_the_ring_ai.game_data import GameData, PrivatePlayerData
-from war_of_the_ring_ai.game_states import State
 
 T = TypeVar("T")
 
 
-def random_agent(
-    state: State[T], _gd: GameData, _pd: PrivatePlayerData, options: list[T]
-) -> T:
-    print(type(state).__name__)
-    choice = random.choice(options)
-    print(f"Choice: {choice}")
-    return choice
+class Agent(ABC):
+    def __init__(self, game: GameData, player: PrivatePlayerData):
+        self.game = game
+        self.player = player
+
+    def agree(self, state: str) -> bool:
+        return self.ask(state, [True, False])
+
+    @abstractmethod
+    def ask(self, state: str, options: list[T]) -> T:
+        ...
 
 
-def human_agent(
-    state: State[T], _gd: GameData, player: PrivatePlayerData, options: list[T]
-) -> T:
-    print(type(state).__name__)
+class RandomAgent(Agent):
+    def ask(self, state: str, options: list[T]) -> T:
+        print(state)
+        choice = random.choice(options)
+        print(f"Choice: {choice}")
+        return choice
 
-    for i, option in enumerate(options):
-        print(f"{i}: {option}")
 
-    print("> ", end="")
-    choice = input()
-    while True:
-        match choice:
-            case "hand":
-                for card in player.hand:
-                    print(card)
-            case choice if choice.isdigit() and 0 <= int(choice) < len(options):
-                return options[int(choice)]
-            case _:
-                print("Invalid")
+class HumanAgent(Agent):
+    def ask(self, state: str, options: list[T]) -> T:
+        print(state)
+
+        for i, option in enumerate(options):
+            print(f"{i}: {option}")
 
         print("> ", end="")
         choice = input()
+        while True:
+            match choice:
+                case "hand":
+                    for card in self.player.hand:
+                        print(card)
+                case choice if choice.isdigit() and 0 <= int(choice) < len(options):
+                    return options[int(choice)]
+                case _:
+                    print("Invalid")
+
+            print("> ", end="")
+            choice = input()

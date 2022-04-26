@@ -1,11 +1,15 @@
 import random
+from collections import Counter
 
 from war_of_the_ring_ai.constants import (
+    FREE_ACTION_DIE,
     FREE_HEROES,
     FREE_NATIONS,
+    SHADOW_ACTION_DIE,
     SHADOW_HEROES,
     CardType,
     DeckType,
+    DieResult,
     Settlement,
     Side,
 )
@@ -76,3 +80,13 @@ def rollable_dice(player: PlayerData, game: GameData) -> int:
     )
     allocated_eyes = game.hunt_box.eyes if player.public.side is Side.SHADOW else 0
     return player.public.starting_dice + hero_dice - allocated_eyes
+
+
+def roll_dice(player: PlayerData, game: GameData) -> None:
+    is_shadow = player.public.side is Side.SHADOW
+    die = SHADOW_ACTION_DIE if is_shadow else FREE_ACTION_DIE
+    count = rollable_dice(player, game)
+    player.public.dice = Counter(random.choice(die) for _ in range(count))
+    if is_shadow:
+        game.hunt_box.eyes += player.public.dice[DieResult.EYE]
+        player.public.dice.pop(DieResult.EYE, None)
