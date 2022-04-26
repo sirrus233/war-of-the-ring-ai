@@ -42,7 +42,7 @@ def is_game_over(context: GameContext, _param: None) -> bool:
 ###
 # States
 ###
-class GameState(Enum):
+class State(Enum):
     TURN_START = auto()
     COMPUTE_SCORE = auto()
     GAME_OVER = auto()
@@ -85,54 +85,64 @@ class UnmodeledEvent(EmptyEvent):
 
 
 @pytest.fixture(name="machine")
-def fixture_state_machine() -> Iterable[StateMachine[GameState, GameContext]]:
+def fixture_state_machine() -> Iterable[StateMachine[State, GameContext]]:
     T = TypeVar("T")
 
     @dataclass(frozen=True)
-    class GameTransition(Transition[GameState, GameContext, T]):
+    class GameTransition(Transition[State, GameContext, T]):
         ...
 
     machine = StateMachine(
-        GameState,
+        State,
         GameContext(),
-        initial=GameState.TURN_START,
-        final=[GameState.GAME_OVER],
+        initial=State.TURN_START,
+        final=[State.GAME_OVER],
     )
 
-    machine.add_entry_action(GameState.TURN_START, incr_turn)
+    machine.add_entry_action(State.TURN_START, incr_turn)
     machine.add_transition(
-        GameState.TURN_START,
         GameTransition[int](
-            Roll, TransitionType.FIRE, GameState.COMPUTE_SCORE, action=roll_die
+            Roll,
+            TransitionType.FIRE,
+            State.TURN_START,
+            State.COMPUTE_SCORE,
+            action=roll_die,
         ),
     )
     machine.add_transition(
-        GameState.TURN_START,
-        GameTransition[None](Pause, TransitionType.PUSH, GameState.PAUSED),
-    )
-
-    machine.add_transition(
-        GameState.COMPUTE_SCORE,
-        GameTransition[None](UncommonEvent, TransitionType.FIRE, GameState.GAME_OVER),
-    )
-    machine.add_transition(
-        GameState.COMPUTE_SCORE,
         GameTransition[None](
-            Next, TransitionType.FIRE, GameState.GAME_OVER, guard=is_game_over
+            Pause, TransitionType.PUSH, State.TURN_START, State.PAUSED
+        ),
+    )
+
+    machine.add_transition(
+        GameTransition[None](
+            UncommonEvent, TransitionType.FIRE, State.COMPUTE_SCORE, State.GAME_OVER
         ),
     )
     machine.add_transition(
-        GameState.COMPUTE_SCORE,
-        GameTransition[None](Next, TransitionType.FIRE, GameState.TURN_START),
+        GameTransition[None](
+            Next,
+            TransitionType.FIRE,
+            State.COMPUTE_SCORE,
+            State.GAME_OVER,
+            guard=is_game_over,
+        )
     )
     machine.add_transition(
-        GameState.COMPUTE_SCORE,
-        GameTransition[None](Pause, TransitionType.PUSH, GameState.PAUSED),
+        GameTransition[None](
+            Next, TransitionType.FIRE, State.COMPUTE_SCORE, State.TURN_START
+        ),
+    )
+    machine.add_transition(
+        GameTransition[None](
+            Pause, TransitionType.PUSH, State.COMPUTE_SCORE, State.PAUSED
+        ),
     )
 
-    machine.add_exit_action(GameState.PAUSED, incr_pause)
+    machine.add_exit_action(State.PAUSED, incr_pause)
     machine.add_transition(
-        GameState.PAUSED, GameTransition[None](Pause, TransitionType.POP)
+        GameTransition[None](Pause, TransitionType.POP, State.PAUSED)
     )
 
     yield machine
@@ -142,30 +152,30 @@ def fixture_state_machine() -> Iterable[StateMachine[GameState, GameContext]]:
     "transition_type", [t for t in TransitionType if t is not TransitionType.POP]
 )
 def test_cannot_construct_invalid_transition(
-    machine: StateMachine[GameState, GameContext], transition_type: TransitionType
+    machine: StateMachine[State, GameContext], transition_type: TransitionType
 ) -> None:
     with pytest.raises(ValueError):
-        machine.add_transition(GameState.TURN_START, Transition(Next, transition_type))
+        machine.add_transition(Transition(Next, transition_type, State.TURN_START))
 
 
 def test_only_sent_event_causes_transition(
-    machine: StateMachine[GameState, GameContext]
+    machine: StateMachine[State, GameContext]
 ) -> None:
     listener = machine.start()
     listener.send(Roll(3))
     listener.send(Next())
-    assert machine.current_state() is GameState.TURN_START
+    assert machine.current_state() is State.TURN_START
 
 
 def test_unmodeled_events_are_ignored(
-    machine: StateMachine[GameState, GameContext]
+    machine: StateMachine[State, GameContext]
 ) -> None:
     listener = machine.start()
     listener.send(UnmodeledEvent())
-    assert machine.current_state() is GameState.TURN_START
+    assert machine.current_state() is State.TURN_START
 
 
-def test_exit_actions_fire(machine: StateMachine[GameState, GameContext]) -> None:
+def test_exit_actions_fire(machine: StateMachine[State, GameContext]) -> None:
     listener = machine.start()
     listener.send(Pause())
     assert machine.context.pause_count == 0
@@ -173,22 +183,22 @@ def test_exit_actions_fire(machine: StateMachine[GameState, GameContext]) -> Non
     assert machine.context.pause_count == 1
 
 
-def test_hierarchical_state(machine: StateMachine[GameState, GameContext]) -> None:
+def test_hierarchical_state(machine: StateMachine[State, GameContext]) -> None:
     listener = machine.start()
-    assert machine.current_state() is GameState.TURN_START
+    assert machine.current_state() is State.TURN_START
     listener.send(Pause())
-    assert machine.current_state() is GameState.PAUSED
+    assert machine.current_state() is State.PAUSED
     listener.send(Pause())
-    assert machine.current_state() is GameState.TURN_START
+    assert machine.current_state() is State.TURN_START
     listener.send(Roll(3))
-    assert machine.current_state() is GameState.COMPUTE_SCORE
+    assert machine.current_state() is State.COMPUTE_SCORE
     listener.send(Pause())
-    assert machine.current_state() is GameState.PAUSED
+    assert machine.current_state() is State.PAUSED
     listener.send(Pause())
-    assert machine.current_state() is GameState.COMPUTE_SCORE
+    assert machine.current_state() is State.COMPUTE_SCORE
 
 
-def test_e2e(machine: StateMachine[GameState, GameContext]) -> None:
+def test_e2e(machine: StateMachine[State, GameContext]) -> None:
     listener = machine.start()
 
     while True:
@@ -198,6 +208,6 @@ def test_e2e(machine: StateMachine[GameState, GameContext]) -> None:
         except StopIteration:
             break
 
-    assert machine.current_state() is GameState.GAME_OVER
+    assert machine.current_state() is State.GAME_OVER
     assert machine.context.score == 21
     assert machine.context.turn == 7

@@ -45,7 +45,8 @@ ExitAction: TypeAlias = Callable[[T], None]
 class Transition(Generic[E, T, U]):
     event: Type[Event[U]]
     type: TransitionType
-    next: Optional[E] = None
+    start: E
+    end: Optional[E] = None
     guard: TransitionGuard[T, U] = lambda _context, _param: True
     action: TransitionAction[T, U] = lambda _context, _param: None
 
@@ -69,12 +70,12 @@ class StateMachine(Generic[E, T]):
     def current_state(self) -> E:
         return self.state[-1]
 
-    def add_transition(self, state: E, transition: Transition[E, T, Any]) -> None:
-        if transition.next is None and transition.type is not TransitionType.POP:
+    def add_transition(self, transition: Transition[E, T, Any]) -> None:
+        if transition.end is None and transition.type is not TransitionType.POP:
             raise ValueError(
                 "Transition must define a next state unless TransitionType is POP."
             )
-        self.transitions[state].append(transition)
+        self.transitions[transition.start].append(transition)
 
     def add_entry_action(self, state: E, action: EntryAction[T]) -> None:
         self.entry_actions[state].append(action)
@@ -98,12 +99,12 @@ class StateMachine(Generic[E, T]):
                     self.perform_exit_actions(self.current_state())
                     match transition.type:
                         case TransitionType.FIRE:
-                            assert transition.next is not None
+                            assert transition.end is not None
                             self.state.pop()
-                            self.state.append(transition.next)
+                            self.state.append(transition.end)
                         case TransitionType.PUSH:
-                            assert transition.next is not None
-                            self.state.append(transition.next)
+                            assert transition.end is not None
+                            self.state.append(transition.end)
                         case TransitionType.POP:  # pragma: no branch
                             self.state.pop()
                     self.perform_entry_actions(self.current_state())
