@@ -1,16 +1,10 @@
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Iterable, TypeVar
+from typing import Iterable
 
 import pytest
 
-from war_of_the_ring_ai.fsm import (
-    EmptyEvent,
-    Event,
-    StateMachine,
-    Transition,
-    TransitionType,
-)
+from war_of_the_ring_ai.fsm import EmptyEvent, Event, StateMachine, TransitionType
 
 
 @dataclass
@@ -86,12 +80,6 @@ class UnmodeledEvent(EmptyEvent):
 
 @pytest.fixture(name="machine")
 def fixture_state_machine() -> Iterable[StateMachine[State, GameContext]]:
-    T = TypeVar("T")
-
-    @dataclass(frozen=True)
-    class GameTransition(Transition[State, GameContext, T]):
-        ...
-
     machine = StateMachine(
         State,
         GameContext(),
@@ -101,58 +89,35 @@ def fixture_state_machine() -> Iterable[StateMachine[State, GameContext]]:
 
     machine.add_entry_action(State.TURN_START, incr_turn)
     machine.add_transition(
-        GameTransition[int](
-            Roll,
-            TransitionType.FIRE,
-            State.TURN_START,
-            State.COMPUTE_SCORE,
-            action=roll_die,
-        ),
+        Roll,
+        TransitionType.FIRE,
+        State.TURN_START,
+        State.COMPUTE_SCORE,
+        action=roll_die,
     )
-    machine.add_transition(
-        GameTransition[None](
-            Pause, TransitionType.PUSH, State.TURN_START, State.PAUSED
-        ),
-    )
+    machine.add_transition(Pause, TransitionType.PUSH, State.TURN_START, State.PAUSED)
 
     machine.add_transition(
-        GameTransition[None](
-            UncommonEvent, TransitionType.FIRE, State.COMPUTE_SCORE, State.GAME_OVER
-        ),
+        UncommonEvent, TransitionType.FIRE, State.COMPUTE_SCORE, State.GAME_OVER
     )
     machine.add_transition(
-        GameTransition[None](
-            Next,
-            TransitionType.FIRE,
-            State.COMPUTE_SCORE,
-            State.GAME_OVER,
-            guard=is_game_over,
-        )
+        Next,
+        TransitionType.FIRE,
+        State.COMPUTE_SCORE,
+        State.GAME_OVER,
+        guard=is_game_over,
     )
     machine.add_transition(
-        GameTransition[None](
-            Next, TransitionType.FIRE, State.COMPUTE_SCORE, State.TURN_START
-        ),
+        Next, TransitionType.FIRE, State.COMPUTE_SCORE, State.TURN_START
     )
     machine.add_transition(
-        GameTransition[None](
-            Pause, TransitionType.PUSH, State.COMPUTE_SCORE, State.PAUSED
-        ),
+        Pause, TransitionType.PUSH, State.COMPUTE_SCORE, State.PAUSED
     )
 
     machine.add_exit_action(State.PAUSED, incr_pause)
-    machine.add_transition(
-        GameTransition[None](Pause, TransitionType.POP, State.PAUSED)
-    )
+    machine.add_transition(Pause, TransitionType.POP, State.PAUSED)
 
     yield machine
-
-
-def test_cannot_construct_non_parameterized_transition(
-    machine: StateMachine[State, GameContext]
-) -> None:
-    with pytest.raises(ValueError):
-        machine.add_transition(Transition(Next, TransitionType.FIRE, State.TURN_START))
 
 
 @pytest.mark.parametrize(
@@ -162,13 +127,7 @@ def test_cannot_construct_invalid_transition(
     machine: StateMachine[State, GameContext], transition_type: TransitionType
 ) -> None:
     with pytest.raises(ValueError):
-        T = TypeVar("T")
-
-        @dataclass(frozen=True)
-        class GameTransition(Transition[State, GameContext, T]):
-            ...
-
-        machine.add_transition(GameTransition(Next, transition_type, State.TURN_START))
+        machine.add_transition(Next, transition_type, State.TURN_START)
 
 
 def test_only_sent_event_causes_transition(

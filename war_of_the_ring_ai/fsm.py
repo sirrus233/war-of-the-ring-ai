@@ -46,9 +46,9 @@ class Transition(Generic[E, T, U]):
     event: Type[Event[U]]
     type: TransitionType
     start: E
-    end: Optional[E] = None
-    guard: TransitionGuard[T, U] = lambda _context, _param: True
-    action: TransitionAction[T, U] = lambda _context, _param: None
+    end: Optional[E]
+    guard: TransitionGuard[T, U]
+    action: TransitionAction[T, U]
 
 
 class StateMachine(Generic[E, T]):
@@ -70,13 +70,20 @@ class StateMachine(Generic[E, T]):
     def current_state(self) -> E:
         return self.state[-1]
 
-    def add_transition(self, transition: Transition[E, T, Any]) -> None:
-        if type(transition) == Transition:
-            raise ValueError("Transition must be subclassed to specify payload type.")
-        if transition.end is None and transition.type is not TransitionType.POP:
+    def add_transition(  # pylint: disable=too-many-arguments
+        self,
+        event: Type[Event[U]],
+        transition_type: TransitionType,
+        start: E,
+        end: Optional[E] = None,
+        guard: TransitionGuard[T, U] = lambda _context, _param: True,
+        action: TransitionAction[T, U] = lambda _context, _param: None,
+    ) -> None:
+        if end is None and transition_type is not TransitionType.POP:
             raise ValueError(
-                "Transition must define a next state unless TransitionType is POP."
+                "Transition must define an end state unless TransitionType is POP."
             )
+        transition = Transition(event, transition_type, start, end, guard, action)
         self.transitions[transition.start].append(transition)
 
     def add_entry_action(self, state: E, action: EntryAction[T]) -> None:
