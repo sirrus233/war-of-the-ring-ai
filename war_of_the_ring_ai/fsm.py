@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
 from typing import (
     Any,
@@ -16,6 +16,7 @@ from typing import (
 
 T = TypeVar("T")
 U = TypeVar("U")
+E = TypeVar("E", bound=Enum)
 
 
 @dataclass(frozen=True)
@@ -36,51 +37,65 @@ class TransitionType(Enum):
 
 TransitionGuard: TypeAlias = Callable[[T, U], bool]
 TransitionAction: TypeAlias = Callable[[T, U], None]
+EntryAction: TypeAlias = Callable[[T], None]
+ExitAction: TypeAlias = Callable[[T], None]
 
 
 @dataclass(frozen=True)
-class Transition(Generic[T, U]):
+class Transition(Generic[E, T, U]):
     event: Type[Event[U]]
     type: TransitionType
-    next: Optional[State[T]] = None
+    next: Optional[E] = None
     guard: TransitionGuard[T, U] = lambda _context, _param: True
     action: TransitionAction[T, U] = lambda _context, _param: None
 
-    def __post_init__(self) -> None:
-        if self.next is None and self.type is not TransitionType.POP:
-            raise ValueError(
-                "Transition must define a next state unless TransitionType is POP."
-            )
 
-
-@dataclass(frozen=True)
-class State(Generic[T]):
-    transitions: list[Transition[T, Any]] = field(default_factory=list)
-    on_enter: Callable[[T], None] = lambda _context: None
-    on_exit: Callable[[T], None] = lambda _context: None
-
-    def add_transition(self, transition: Transition[T, Any]) -> None:
-        self.transitions.append(transition)
-
-
-class StateMachine(Generic[T]):
+class StateMachine(Generic[E, T]):
     def __init__(
-        self, context: T, initial: State[T], final: Iterable[State[T]] = ()
+        self, model: Type[E], context: T, initial: E, final: Iterable[E] = ()
     ) -> None:
         self.context = context
         self.state = [initial]
         self.final_states = final
 
-    @property
-    def current_state(self) -> State[T]:
+        self.entry_actions: dict[E, list[EntryAction[T]]] = {
+            state: [] for state in model
+        }
+        self.exit_actions: dict[E, list[ExitAction[T]]] = {state: [] for state in model}
+        self.transitions: dict[E, list[Transition[E, T, Any]]] = {
+            state: [] for state in model
+        }
+
+    def current_state(self) -> E:
         return self.state[-1]
 
-    def _handle(self, event: Event[Any]) -> None:
-        for transition in self.current_state.transitions:
+    def add_transition(self, state: E, transition: Transition[E, T, Any]) -> None:
+        if transition.next is None and transition.type is not TransitionType.POP:
+            raise ValueError(
+                "Transition must define a next state unless TransitionType is POP."
+            )
+        self.transitions[state].append(transition)
+
+    def add_entry_action(self, state: E, action: EntryAction[T]) -> None:
+        self.entry_actions[state].append(action)
+
+    def add_exit_action(self, state: E, action: ExitAction[T]) -> None:
+        self.exit_actions[state].append(action)
+
+    def perform_entry_actions(self, state: E) -> None:
+        for action in self.entry_actions[state]:
+            action(self.context)
+
+    def perform_exit_actions(self, state: E) -> None:
+        for action in self.exit_actions[state]:
+            action(self.context)
+
+    def _handle_event(self, event: Event[Any]) -> None:
+        for transition in self.transitions[self.current_state()]:
             if isinstance(event, transition.event):
                 if transition.guard(self.context, event.payload):
                     transition.action(self.context, event.payload)
-                    self.current_state.on_exit(self.context)
+                    self.perform_exit_actions(self.current_state())
                     match transition.type:
                         case TransitionType.FIRE:
                             assert transition.next is not None
@@ -91,17 +106,17 @@ class StateMachine(Generic[T]):
                             self.state.append(transition.next)
                         case TransitionType.POP:  # pragma: no branch
                             self.state.pop()
-                    self.current_state.on_enter(self.context)
+                    self.perform_entry_actions(self.current_state())
                     return
 
-    def _start(self) -> Generator[None, Event[Any], State[T]]:
-        while self.current_state not in self.final_states:
+    def _start(self) -> Generator[None, Event[Any], E]:
+        while self.current_state() not in self.final_states:
             event = yield
-            self._handle(event)
+            self._handle_event(event)
 
-        return self.current_state
+        return self.current_state()
 
-    def start(self) -> Generator[None, Event[Any], State[T]]:
+    def start(self) -> Generator[None, Event[Any], E]:
         machine = self._start()
-        next(machine)
+        next(machine)  # Prime the generator
         return machine
