@@ -201,6 +201,7 @@ def elven_ring_flow(context: GameContext) -> None:
     if active_player.public.elven_rings > 0 and agent.agree("UseElvenRing"):
         use_elven_ring(active_player, inactive_player)
         old_die = agent.ask("ElvenDie", active_player.public.dice)
+        # TODO Should be impossible to select old_die as new_die
         new_die = agent.ask("ElvenDieChange", valid_elven_ring_changes(active_side))
         active_player.public.dice.remove(old_die)
         if new_die is DieResult.EYE:
@@ -219,7 +220,8 @@ def pass_flow(context: GameContext) -> bool:
 
 
 def choose_action_flow(context: GameContext) -> Action:
-    context.active_agent.ask("ChooseActionDie", context.active_player.public.dice)
+    die = context.active_agent.ask("ChooseActionDie", context.active_player.public.dice)
+    context.active_player.public.dice.remove(die)
     # TODO Determine valid actions based on selected die
     return Action.SKIP
 

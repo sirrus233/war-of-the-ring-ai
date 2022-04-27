@@ -110,9 +110,9 @@ def use_elven_ring(active_player: PlayerData, inactive_player: PlayerData) -> No
 
 
 def valid_elven_ring_changes(side: Side) -> Sequence[DieResult]:
-    if side is Side.SHADOW:
-        return SHADOW_ACTION_DIE
-    return [die for die in FREE_ACTION_DIE if die is not DieResult.WILL]
+    if side is Side.FREE:
+        return (DieResult.CHARACTER, DieResult.HYBRID, DieResult.PALANTIR)
+    return (DieResult.CHARACTER, DieResult.HYBRID, DieResult.PALANTIR, DieResult.EYE)
 
 
 def can_pass(active_player: PlayerData, inactive_player: PlayerData) -> bool:

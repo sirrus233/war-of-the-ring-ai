@@ -51,6 +51,9 @@ class Region:
     settlement: Optional[Settlement] = None
     is_fortification: bool = False
 
+    def __repr__(self) -> str:
+        return self.name
+
 
 @dataclass(frozen=True)
 class Card:
