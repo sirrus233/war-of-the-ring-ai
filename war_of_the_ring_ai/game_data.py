@@ -1,6 +1,5 @@
 import csv
 import random
-from collections import Counter
 from dataclasses import dataclass, field
 from typing import Mapping, NamedTuple
 
@@ -129,7 +128,7 @@ class PublicPlayerData:
     elven_rings: int
     decks: Mapping[DeckType, PublicDeckData]
     hand: list[DeckType] = field(default_factory=list)
-    dice: Counter[DieResult] = field(default_factory=Counter)
+    dice: list[DieResult] = field(default_factory=list)
     victory_points: int = 0
 
 

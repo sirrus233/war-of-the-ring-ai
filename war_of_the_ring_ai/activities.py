@@ -1,5 +1,5 @@
 import random
-from collections import Counter
+from typing import Iterable, Sequence
 
 from war_of_the_ring_ai.constants import (
     FREE_ACTION_DIE,
@@ -20,7 +20,7 @@ from war_of_the_ring_ai.game_data import (
     GameData,
     PlayerData,
 )
-from war_of_the_ring_ai.game_objects import Card, Character
+from war_of_the_ring_ai.game_objects import Card, Character, Region
 
 
 def draw(player: PlayerData, deck: DeckType) -> None:
@@ -50,6 +50,13 @@ def fellowship_can_heal(game: GameData) -> bool:
         fellowship.location.nation in FREE_NATIONS
         and fellowship.location.settlement in (Settlement.CITY, Settlement.STRONGHOLD)
         and fellowship.location not in game.conquered
+    )
+
+
+def fellowship_can_activate(region: Region) -> bool:
+    return region.nation in FREE_NATIONS and region.settlement in (
+        Settlement.CITY,
+        Settlement.STRONGHOLD,
     )
 
 
@@ -86,7 +93,27 @@ def roll_dice(player: PlayerData, game: GameData) -> None:
     is_shadow = player.public.side is Side.SHADOW
     die = SHADOW_ACTION_DIE if is_shadow else FREE_ACTION_DIE
     count = rollable_dice(player, game)
-    player.public.dice = Counter(random.choice(die) for _ in range(count))
+    player.public.dice = [random.choice(die) for _ in range(count)]
     if is_shadow:
-        game.hunt_box.eyes += player.public.dice[DieResult.EYE]
-        player.public.dice.pop(DieResult.EYE, None)
+        game.hunt_box.eyes += player.public.dice.count(DieResult.EYE)
+        player.public.dice = [d for d in player.public.dice if d is not DieResult.EYE]
+
+
+def action_dice_remaining(players: Iterable[PlayerData]) -> bool:
+    return any(player.public.dice for player in players)
+
+
+def use_elven_ring(active_player: PlayerData, inactive_player: PlayerData) -> None:
+    active_player.public.elven_rings -= 1
+    if active_player.public.side == Side.FREE:
+        inactive_player.public.elven_rings += 1
+
+
+def valid_elven_ring_changes(side: Side) -> Sequence[DieResult]:
+    if side is Side.SHADOW:
+        return SHADOW_ACTION_DIE
+    return [die for die in FREE_ACTION_DIE if die is not DieResult.WILL]
+
+
+def can_pass(active_player: PlayerData, inactive_player: PlayerData) -> bool:
+    return len(active_player.public.dice) < len(inactive_player.public.dice)

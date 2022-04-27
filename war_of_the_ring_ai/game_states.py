@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import random
 from abc import ABC, abstractmethod
-from collections import Counter
 from dataclasses import dataclass
 from typing import (
     Any,
@@ -245,14 +244,18 @@ class RollPhase(SimpleState):
         for side in Side:
             player = self.context.players[side]
             die = dice[side]
-            player.public.dice = Counter(
+            player.public.dice = list(
                 random.choice(die)
                 for _ in range(rollable_dice(player, self.context.game))
             )
 
         shadow_player = self.context.players[Side.SHADOW]
-        self.context.game.hunt_box.eyes += shadow_player.public.dice[DieResult.EYE]
-        shadow_player.public.dice.pop(DieResult.EYE, None)
+        self.context.game.hunt_box.eyes += shadow_player.public.dice.count(
+            DieResult.EYE
+        )
+        shadow_player.public.dice = [
+            die for die in shadow_player.public.dice if die is not DieResult.EYE
+        ]
 
         self.context.game.active_side = Side.FREE
         return ActionPhase
@@ -261,12 +264,6 @@ class RollPhase(SimpleState):
 class ActionPhase(SimpleState):
     def transition(self, response: None) -> Transition:
         # TODO Actions
-        for player in self.context.players.values():
-            print(f"{player.public.side.name}: ", end="")
-            for die, count in player.public.dice.items():
-                for _ in range(count):
-                    print(die.name[0], end=" ")
-            print()
         return VictoryCheckPhase
 
 

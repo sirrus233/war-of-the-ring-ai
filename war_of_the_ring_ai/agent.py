@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from abc import ABC, abstractmethod
-from typing import TypeVar
+from typing import Sequence, TypeVar
 
 from war_of_the_ring_ai.game_data import GameData, PrivatePlayerData
 
@@ -18,12 +18,12 @@ class Agent(ABC):
         return self.ask(state, [True, False])
 
     @abstractmethod
-    def ask(self, state: str, options: list[T]) -> T:
+    def ask(self, state: str, options: Sequence[T]) -> T:
         ...
 
 
 class RandomAgent(Agent):
-    def ask(self, state: str, options: list[T]) -> T:
+    def ask(self, state: str, options: Sequence[T]) -> T:
         print(state)
         choice = random.choice(options)
         print(f"Choice: {choice}")
@@ -31,7 +31,7 @@ class RandomAgent(Agent):
 
 
 class HumanAgent(Agent):
-    def ask(self, state: str, options: list[T]) -> T:
+    def ask(self, state: str, options: Sequence[T]) -> T:
         print(state)
 
         for i, option in enumerate(options):

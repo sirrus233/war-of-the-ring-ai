@@ -111,6 +111,46 @@ SHADOW_ACTION_DIE = (
     DieResult.EYE,
 )
 
+
+class Action(Enum):
+    # Any die can be thrown away without taking an action
+    SKIP = auto()
+
+    # Palantir
+    DRAW_CHARACTER_EVENT = auto()
+    DRAW_STRATEGY_EVENT = auto()
+    PLAY_CHARACTER_EVENT = auto()
+    PLAY_ARMY_EVENT = auto()
+    PLAY_MUSTER_EVENT = auto()
+
+    # Muster
+    DIPLOMACY = auto()
+    MUSTER_ELITE = auto()
+    MUSTER_REGULAR_REGULAR = auto()
+    MUSTER_REGULAR_LEADER = auto()
+    MUSTER_LEADER_LEADER = auto()
+    MUSTER_SARUMAN = auto()
+    MUSTER_WITCH_KING = auto()
+    MUSTER_MOUTH_OF_SAURON = auto()
+
+    # Army
+    MOVE_ARMIES = auto()
+    ATTACK = auto()
+
+    # Character
+    LEADER_MOVE = auto()
+    LEADER_ATTACK = auto()
+    MOVE_FELLOWSHIP = auto()
+    HIDE_FELLOWSHIP = auto()
+    SEPARATE_COMPANIONS = auto()
+    MOVE_COMPANIONS = auto()
+    MOVE_MINIONS = auto()
+
+    # Will
+    MUSTER_GANDALF = auto()
+    MUSTER_ARAGORN = auto()
+
+
 FREE_HEROES = (CharacterID.GANDALF_WHITE, CharacterID.ARAGORN)
 SHADOW_HEROES = (
     CharacterID.SARUMAN,
