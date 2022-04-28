@@ -26,9 +26,11 @@ class ArmyUnit(Placeable):
     rank: UnitRank
     nation: Nation
 
+    @property
     def is_nazgul(self) -> bool:
         return self.rank == UnitRank.LEADER and self.nation == Nation.SAURON
 
+    @property
     def is_unit(self) -> bool:
         return self.rank in (UnitRank.REGULAR, UnitRank.ELITE)
 
@@ -72,11 +74,14 @@ class HuntTile:
     reveal: bool
     side: Optional[Side]
 
+    @property
     def is_eye(self) -> bool:
         return self.corruption == EYE_CORRUPTION_FLAG
 
+    @property
     def is_shelob(self) -> bool:
         return self.corruption == SHELOB_CORRUPTION_FLAG
 
+    @property
     def is_stop(self) -> bool:
         return self.side == Side.SHADOW

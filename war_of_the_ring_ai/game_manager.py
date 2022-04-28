@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Iterable, Mapping, Optional
 
+from war_of_the_ring_ai.action_checks import can_do_action
 from war_of_the_ring_ai.activities import (
     action_dice_remaining,
     can_pass,
@@ -17,6 +18,7 @@ from war_of_the_ring_ai.activities import (
 )
 from war_of_the_ring_ai.agent import Agent, HumanAgent, RandomAgent
 from war_of_the_ring_ai.constants import (
+    ACTIONS,
     FREE_VP_GOAL,
     MAX_HAND_SIZE,
     MORDOR_ENTRANCES,
@@ -222,8 +224,12 @@ def pass_flow(context: GameContext) -> bool:
 def choose_action_flow(context: GameContext) -> Action:
     die = context.active_agent.ask("ChooseActionDie", context.active_player.public.dice)
     context.active_player.public.dice.remove(die)
-    # TODO Determine valid actions based on selected die
-    return Action.SKIP
+    valid_actions = [
+        action
+        for action in ACTIONS[die]
+        if can_do_action(action, context.active_player, context.game)
+    ]
+    return context.active_agent.ask("ChooseAction", valid_actions)
 
 
 def do_action_flow(_context: GameContext, _action: Action) -> Optional[Victory]:

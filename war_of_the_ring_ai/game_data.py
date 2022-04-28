@@ -78,9 +78,11 @@ class PoliticalStatus:
     disposition: int
     active: bool
 
+    @property
     def is_at_war(self) -> bool:
         return self.disposition == 0
 
+    @property
     def can_advance(self) -> bool:
         if self.disposition > 1:
             return True

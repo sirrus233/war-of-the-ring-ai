@@ -126,7 +126,7 @@ HEROES = {
 
 
 class Action(Enum):
-    SKIP = auto()  # Any die can be thrown away without taking an action
+    SKIP = auto()
     DRAW_CHARACTER_EVENT = auto()
     DRAW_STRATEGY_EVENT = auto()
     PLAY_CHARACTER_EVENT = auto()
@@ -153,7 +153,7 @@ class Action(Enum):
     MUSTER_ARAGORN = auto()
 
 
-DIE_ACTIONS = {
+ACTIONS = {
     DieResult.PALANTIR: (
         Action.SKIP,
         Action.DRAW_CHARACTER_EVENT,
@@ -197,6 +197,7 @@ DIE_ACTIONS = {
 INITIAL_GUIDE_ID = CharacterID.GANDALF_GREY
 FELLOWSHIP_START = "Rivendell"
 MORDOR_ENTRANCES = ("Morannon", "Minas Morgul")
+ARAGORN_LOCATIONS = ("Dol Amroth", "Minas Tirith", "Pelargir")
 
 EYE_CORRUPTION_FLAG = 100
 SHELOB_CORRUPTION_FLAG = 200
