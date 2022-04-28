@@ -2,11 +2,9 @@ import random
 from typing import Iterable, Sequence
 
 from war_of_the_ring_ai.constants import (
-    FREE_ACTION_DIE,
-    FREE_HEROES,
-    FREE_NATIONS,
-    SHADOW_ACTION_DIE,
-    SHADOW_HEROES,
+    ACTION_DIE,
+    HEROES,
+    NATIONS,
     CardType,
     DeckType,
     DieResult,
@@ -47,14 +45,14 @@ def discard(player: PlayerData, card: Card) -> None:
 def fellowship_can_heal(game: GameData) -> bool:
     fellowship = game.fellowship
     return (
-        fellowship.location.nation in FREE_NATIONS
+        fellowship.location.nation in NATIONS[Side.FREE]
         and fellowship.location.settlement in (Settlement.CITY, Settlement.STRONGHOLD)
         and fellowship.location not in game.conquered
     )
 
 
-def fellowship_can_activate(region: Region) -> bool:
-    return region.nation in FREE_NATIONS and region.settlement in (
+def fellowship_can_activate_nation(region: Region) -> bool:
+    return region.nation in NATIONS[Side.FREE] and region.settlement in (
         Settlement.CITY,
         Settlement.STRONGHOLD,
     )
@@ -80,8 +78,9 @@ def maximum_hunt_dice(game: GameData) -> int:
 
 
 def rollable_dice(player: PlayerData, game: GameData) -> int:
-    hero_ids = FREE_HEROES if player.public.side is Side.FREE else SHADOW_HEROES
-    heroes = (game.characters[character_id] for character_id in hero_ids)
+    heroes = (
+        game.characters[character_id] for character_id in HEROES[player.public.side]
+    )
     hero_dice = sum(
         1 for hero in heroes if hero.location not in (REINFORCEMENTS, CASUALTIES)
     )
@@ -91,9 +90,10 @@ def rollable_dice(player: PlayerData, game: GameData) -> int:
 
 def roll_dice(player: PlayerData, game: GameData) -> None:
     is_shadow = player.public.side is Side.SHADOW
-    die = SHADOW_ACTION_DIE if is_shadow else FREE_ACTION_DIE
     count = rollable_dice(player, game)
-    player.public.dice = [random.choice(die) for _ in range(count)]
+    player.public.dice = [
+        random.choice(ACTION_DIE[player.public.side]) for _ in range(count)
+    ]
     if is_shadow:
         game.hunt_box.eyes += player.public.dice.count(DieResult.EYE)
         player.public.dice = [d for d in player.public.dice if d is not DieResult.EYE]

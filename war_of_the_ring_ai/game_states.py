@@ -27,10 +27,9 @@ from war_of_the_ring_ai.activities import (
     valid_guides,
 )
 from war_of_the_ring_ai.constants import (
-    FREE_ACTION_DIE,
+    ACTION_DIE,
     FREE_VP_GOAL,
     MAX_HAND_SIZE,
-    SHADOW_ACTION_DIE,
     SHADOW_VP_GOAL,
     DeckType,
     DieResult,
@@ -240,10 +239,9 @@ class HuntAllocationPhase(State[int]):
 
 class RollPhase(SimpleState):
     def transition(self, response: None) -> Transition:
-        dice = {Side.FREE: FREE_ACTION_DIE, Side.SHADOW: SHADOW_ACTION_DIE}
         for side in Side:
             player = self.context.players[side]
-            die = dice[side]
+            die = ACTION_DIE[side]
             player.public.dice = list(
                 random.choice(die)
                 for _ in range(rollable_dice(player, self.context.game))

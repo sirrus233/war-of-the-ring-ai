@@ -84,46 +84,54 @@ class Victory(Enum):
     SPMV = auto()
 
 
-FREE_NATIONS = (
-    Nation.ELVES,
-    Nation.DWARVES,
-    Nation.NORTH,
-    Nation.GONDOR,
-    Nation.ROHAN,
-)
-SHADOW_NATIONS = (Nation.SAURON, Nation.ISENGARD, Nation.SOUTHRON)
+NATIONS = {
+    Side.FREE: (
+        Nation.ELVES,
+        Nation.DWARVES,
+        Nation.NORTH,
+        Nation.GONDOR,
+        Nation.ROHAN,
+    ),
+    Side.SHADOW: (Nation.SAURON, Nation.ISENGARD, Nation.SOUTHRON),
+}
+
+ACTION_DIE = {
+    Side.FREE: (
+        DieResult.CHARACTER,
+        DieResult.CHARACTER,
+        DieResult.MUSTER,
+        DieResult.HYBRID,
+        DieResult.PALANTIR,
+        DieResult.WILL,
+    ),
+    Side.SHADOW: (
+        DieResult.CHARACTER,
+        DieResult.ARMY,
+        DieResult.MUSTER,
+        DieResult.HYBRID,
+        DieResult.PALANTIR,
+        DieResult.EYE,
+    ),
+}
 
 
-FREE_ACTION_DIE = (
-    DieResult.CHARACTER,
-    DieResult.CHARACTER,
-    DieResult.MUSTER,
-    DieResult.HYBRID,
-    DieResult.PALANTIR,
-    DieResult.WILL,
-)
-SHADOW_ACTION_DIE = (
-    DieResult.CHARACTER,
-    DieResult.ARMY,
-    DieResult.MUSTER,
-    DieResult.HYBRID,
-    DieResult.PALANTIR,
-    DieResult.EYE,
-)
+HEROES = {
+    Side.FREE: (CharacterID.GANDALF_WHITE, CharacterID.ARAGORN),
+    Side.SHADOW: (
+        CharacterID.SARUMAN,
+        CharacterID.WITCH_KING,
+        CharacterID.MOUTH_OF_SAURON,
+    ),
+}
 
 
 class Action(Enum):
-    # Any die can be thrown away without taking an action
-    SKIP = auto()
-
-    # Palantir
+    SKIP = auto()  # Any die can be thrown away without taking an action
     DRAW_CHARACTER_EVENT = auto()
     DRAW_STRATEGY_EVENT = auto()
     PLAY_CHARACTER_EVENT = auto()
     PLAY_ARMY_EVENT = auto()
     PLAY_MUSTER_EVENT = auto()
-
-    # Muster
     DIPLOMACY = auto()
     MUSTER_ELITE = auto()
     MUSTER_REGULAR_REGULAR = auto()
@@ -132,12 +140,8 @@ class Action(Enum):
     MUSTER_SARUMAN = auto()
     MUSTER_WITCH_KING = auto()
     MUSTER_MOUTH_OF_SAURON = auto()
-
-    # Army
     MOVE_ARMIES = auto()
     ATTACK = auto()
-
-    # Character
     LEADER_MOVE = auto()
     LEADER_ATTACK = auto()
     MOVE_FELLOWSHIP = auto()
@@ -145,18 +149,50 @@ class Action(Enum):
     SEPARATE_COMPANIONS = auto()
     MOVE_COMPANIONS = auto()
     MOVE_MINIONS = auto()
-
-    # Will
     MUSTER_GANDALF = auto()
     MUSTER_ARAGORN = auto()
 
 
-FREE_HEROES = (CharacterID.GANDALF_WHITE, CharacterID.ARAGORN)
-SHADOW_HEROES = (
-    CharacterID.SARUMAN,
-    CharacterID.WITCH_KING,
-    CharacterID.MOUTH_OF_SAURON,
-)
+DIE_ACTIONS = {
+    DieResult.PALANTIR: (
+        Action.SKIP,
+        Action.DRAW_CHARACTER_EVENT,
+        Action.DRAW_STRATEGY_EVENT,
+        Action.PLAY_CHARACTER_EVENT,
+        Action.PLAY_ARMY_EVENT,
+        Action.PLAY_MUSTER_EVENT,
+    ),
+    DieResult.CHARACTER: (
+        Action.SKIP,
+        Action.LEADER_MOVE,
+        Action.LEADER_ATTACK,
+        Action.MOVE_FELLOWSHIP,
+        Action.HIDE_FELLOWSHIP,
+        Action.SEPARATE_COMPANIONS,
+        Action.MOVE_COMPANIONS,
+        Action.MOVE_MINIONS,
+        Action.PLAY_CHARACTER_EVENT,
+    ),
+    DieResult.MUSTER: (
+        Action.SKIP,
+        Action.DIPLOMACY,
+        Action.MUSTER_ELITE,
+        Action.MUSTER_REGULAR_REGULAR,
+        Action.MUSTER_REGULAR_LEADER,
+        Action.MUSTER_LEADER_LEADER,
+        Action.MUSTER_SARUMAN,
+        Action.MUSTER_WITCH_KING,
+        Action.MUSTER_MOUTH_OF_SAURON,
+        Action.PLAY_MUSTER_EVENT,
+    ),
+    DieResult.ARMY: (
+        Action.SKIP,
+        Action.MOVE_ARMIES,
+        Action.ATTACK,
+        Action.PLAY_ARMY_EVENT,
+    ),
+    DieResult.WILL: (Action.SKIP, Action.MUSTER_GANDALF, Action.MUSTER_ARAGORN),
+}
 
 INITIAL_GUIDE_ID = CharacterID.GANDALF_GREY
 FELLOWSHIP_START = "Rivendell"

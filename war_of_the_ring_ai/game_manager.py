@@ -6,7 +6,7 @@ from war_of_the_ring_ai.activities import (
     can_pass,
     discard,
     draw,
-    fellowship_can_activate,
+    fellowship_can_activate_nation,
     fellowship_can_heal,
     maximum_hunt_dice,
     minimum_hunt_dice,
@@ -165,7 +165,7 @@ def declare_fellowship_flow(context: GameContext) -> None:
         context.game.fellowship.location = agent.ask("DeclareFellowship", reachable)
         context.game.fellowship.progress = 0
 
-        if fellowship_can_activate(fellowship.location):
+        if fellowship_can_activate_nation(fellowship.location):
             assert fellowship.location.nation is not None
             context.game.politics[fellowship.location.nation].active = True
 
