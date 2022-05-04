@@ -215,4 +215,5 @@ def can_muster_aragorn(player: PlayerData, game: GameData) -> bool:
         player.public.side is Side.FREE
         and aragorn.location is REINFORCEMENTS
         and strider.location.name in ARAGORN_LOCATIONS
+        and strider.location not in game.conquered
     )
