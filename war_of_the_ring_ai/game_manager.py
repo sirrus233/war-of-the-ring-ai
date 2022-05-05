@@ -203,8 +203,9 @@ def elven_ring_flow(context: GameContext) -> None:
     if active_player.public.elven_rings > 0 and agent.agree("UseElvenRing"):
         use_elven_ring(active_player, inactive_player)
         old_die = agent.ask("ElvenDie", active_player.public.dice)
-        # TODO Should be impossible to select old_die as new_die
-        new_die = agent.ask("ElvenDieChange", valid_elven_ring_changes(active_side))
+        new_die = agent.ask(
+            "ElvenDieChange", valid_elven_ring_changes(active_side, old_die)
+        )
         active_player.public.dice.remove(old_die)
         if new_die is DieResult.EYE:
             context.game.hunt_box.eyes += 1
