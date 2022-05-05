@@ -109,8 +109,11 @@ def can_muster_elite(player: PlayerData, game: GameData) -> bool:
         for nation in NATIONS[player.public.side]
         if game.politics[nation].is_at_war
     ]
+    # TODO This is insufficient. You need a unit to muster, AND a place to put it.
     return any(
-        unit.rank is UnitRank.ELITE and unit.nation in at_war_nations
+        unit.location is REINFORCEMENTS
+        and unit.rank is UnitRank.ELITE
+        and unit.nation in at_war_nations
         for unit in game.armies
     )
 
