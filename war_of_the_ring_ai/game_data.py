@@ -159,13 +159,6 @@ class GameData:  # pylint: disable=too-many-instance-attributes
         self.regions: RegionMap = init_region_map()
         self.conquered: set[Region] = set()
         self.armies: list[ArmyUnit] = init_armies(self.regions) + init_reinforcements()
-        for nation in Nation:
-            for unit in self.armies:
-                if unit.nation is nation and unit.location is not REINFORCEMENTS:
-                    print(unit)
-                if unit.nation is nation and unit.location is REINFORCEMENTS:
-                    print(unit)
-
         self.characters: dict[CharacterID, Character] = init_characters()
         self.politics: dict[Nation, PoliticalStatus] = init_politics()
         self.hunt_pool: HuntPool = init_hunt_pool()
