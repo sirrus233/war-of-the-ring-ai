@@ -110,7 +110,8 @@ def can_muster_elite(player: PlayerData, game: GameData) -> bool:
         if game.politics[nation].is_at_war
     ]
     return any(
-        game.reinforcements[nation][UnitRank.ELITE] > 0 for nation in at_war_nations
+        unit.rank is UnitRank.ELITE and unit.nation in at_war_nations
+        for unit in game.armies
     )
 
 
