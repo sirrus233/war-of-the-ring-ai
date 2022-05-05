@@ -158,9 +158,15 @@ class GameData:  # pylint: disable=too-many-instance-attributes
         self.turn: int = 0
         self.regions: RegionMap = init_region_map()
         self.conquered: set[Region] = set()
-        self.armies: list[ArmyUnit] = init_armies(self.regions)
+        self.armies: list[ArmyUnit] = init_armies(self.regions) + init_reinforcements()
+        for nation in Nation:
+            for unit in self.armies:
+                if unit.nation is nation and unit.location is not REINFORCEMENTS:
+                    print(unit)
+                if unit.nation is nation and unit.location is REINFORCEMENTS:
+                    print(unit)
+
         self.characters: dict[CharacterID, Character] = init_characters()
-        self.reinforcements: dict[Nation, dict[UnitRank, int]] = init_reinforcements()
         self.politics: dict[Nation, PoliticalStatus] = init_politics()
         self.hunt_pool: HuntPool = init_hunt_pool()
         self.hunt_box = HuntBox()
@@ -235,15 +241,35 @@ def init_armies(regions: RegionMap) -> list[ArmyUnit]:
                 UnitRank.ELITE: int(elites),
                 UnitRank.LEADER: int(leaders),
             }
-            if any(count > 0 for count in unit_counts.values()):
-                region = regions.get_region(name)
-                nation = region.nation if region.nation else Nation.GONDOR
-                units = [
-                    ArmyUnit(region, rank, nation)
-                    for rank, count in unit_counts.items()
-                    for _ in range(count)
-                ]
-                armies.extend(units)
+            region = regions.get_region(name)
+            nation = region.nation if region.nation else Nation.GONDOR
+            units = [
+                ArmyUnit(region, rank, nation)
+                for rank, count in unit_counts.items()
+                for _ in range(count)
+            ]
+            armies.extend(units)
+
+    return armies
+
+
+def init_reinforcements() -> list[ArmyUnit]:
+    armies: list[ArmyUnit] = []
+
+    with open("data/reinforcements.csv", newline="", encoding="utf8") as csvfile:
+        reader = csv.reader(csvfile, delimiter="|")
+        for nation, regulars, elites, leaders in reader:
+            unit_counts = {
+                UnitRank.REGULAR: int(regulars),
+                UnitRank.ELITE: int(elites),
+                UnitRank.LEADER: int(leaders),
+            }
+            units = [
+                ArmyUnit(REINFORCEMENTS, rank, Nation[nation])
+                for rank, count in unit_counts.items()
+                for _ in range(count)
+            ]
+            armies.extend(units)
 
     return armies
 
@@ -264,21 +290,6 @@ def init_characters() -> dict[CharacterID, Character]:
             characters[character.id] = character
 
     return characters
-
-
-def init_reinforcements() -> dict[Nation, dict[UnitRank, int]]:
-    reinforcements: dict[Nation, dict[UnitRank, int]] = {}
-
-    with open("data/reinforcements.csv", newline="", encoding="utf8") as csvfile:
-        reader = csv.reader(csvfile, delimiter="|")
-        for nation, regulars, elites, leaders in reader:
-            reinforcements[Nation[nation]] = {
-                UnitRank.REGULAR: int(regulars),
-                UnitRank.ELITE: int(elites),
-                UnitRank.LEADER: int(leaders),
-            }
-
-    return reinforcements
 
 
 def init_politics() -> dict[Nation, PoliticalStatus]:
