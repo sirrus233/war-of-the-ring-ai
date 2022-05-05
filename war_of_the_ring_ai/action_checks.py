@@ -5,6 +5,7 @@ from war_of_the_ring_ai.constants import (
     CardType,
     CharacterID,
     DeckType,
+    Nation,
     Side,
     UnitRank,
 )
@@ -127,7 +128,11 @@ def can_muster_leader_leader(player: PlayerData, game: GameData) -> bool:
 
 def can_muster_saruman(player: PlayerData, game: GameData) -> bool:
     saruman = game.characters[CharacterID.SARUMAN]
-    return player.public.side is Side.SHADOW and saruman.location is REINFORCEMENTS
+    return (
+        player.public.side is Side.SHADOW
+        and saruman.location is REINFORCEMENTS
+        and game.politics[Nation.ISENGARD].is_at_war
+    )
 
 
 def can_muster_witch_king(player: PlayerData, game: GameData) -> bool:
@@ -137,6 +142,7 @@ def can_muster_witch_king(player: PlayerData, game: GameData) -> bool:
     return (
         player.public.side is Side.SHADOW
         and witch_king.location is REINFORCEMENTS
+        and game.politics[Nation.SAURON].is_at_war
         and free_nation_at_war
     )
 
