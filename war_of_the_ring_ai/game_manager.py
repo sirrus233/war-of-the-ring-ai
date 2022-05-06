@@ -30,12 +30,12 @@ from war_of_the_ring_ai.constants import (
     Victory,
 )
 from war_of_the_ring_ai.game_data import (
-    MORDOR,
     GameData,
     PlayerData,
     init_private_player_data,
     init_public_player_data,
 )
+from war_of_the_ring_ai.game_objects import MORDOR
 
 
 @dataclass

@@ -17,18 +17,16 @@ from war_of_the_ring_ai.constants import (
     UnitRank,
 )
 from war_of_the_ring_ai.game_objects import (
+    FELLOWSHIP,
+    REINFORCEMENTS,
     ArmyUnit,
+    ArmyUnitCollection,
     Card,
     Character,
     HuntTile,
     Region,
     RegionCollection,
 )
-
-FELLOWSHIP = Region("Fellowship")
-REINFORCEMENTS = Region("Reinforcements")
-CASUALTIES = Region("Casualties")
-MORDOR = Region("Mordor")
 
 
 class RegionMap:
@@ -168,7 +166,9 @@ class GameData:  # pylint: disable=too-many-instance-attributes
         self.turn: int = 0
         self.regions: RegionMap = init_region_map()
         self.conquered: set[Region] = set()
-        self.armies: list[ArmyUnit] = init_armies(self.regions) + init_reinforcements()
+        self.armies: ArmyUnitCollection = ArmyUnitCollection(
+            init_armies(self.regions) + init_reinforcements()
+        )
         self.characters: dict[CharacterID, Character] = init_characters()
         self.politics: dict[Nation, PoliticalStatus] = init_politics()
         self.hunt_pool: HuntPool = init_hunt_pool()

@@ -11,14 +11,15 @@ from war_of_the_ring_ai.constants import (
     Settlement,
     Side,
 )
-from war_of_the_ring_ai.game_data import (
+from war_of_the_ring_ai.game_data import GameData, PlayerData
+from war_of_the_ring_ai.game_objects import (
     CASUALTIES,
     FELLOWSHIP,
     REINFORCEMENTS,
-    GameData,
-    PlayerData,
+    Card,
+    Character,
+    Region,
 )
-from war_of_the_ring_ai.game_objects import Card, Character, Region
 
 
 def draw(player: PlayerData, deck: DeckType) -> None:
@@ -121,3 +122,33 @@ def valid_elven_ring_changes(side: Side, original: DieResult) -> Sequence[DieRes
 
 def can_pass(active_player: PlayerData, inactive_player: PlayerData) -> bool:
     return len(active_player.public.dice) < len(inactive_player.public.dice)
+
+
+def is_free(region: Region, side: Side, game: GameData) -> bool:
+    friendly_units = any(game.armies.with_location(region).with_side(side).units_only())
+    enemy = Side.SHADOW if side is Side.FREE else Side.FREE
+    enemy_units = any(game.armies.with_location(region).with_side(enemy).units_only())
+    enemy_controlled_settlement = region.settlement is not None and (
+        (region.nation in NATIONS[side]) == (region in game.conquered)
+    )
+    besieging = (
+        region.settlement is Settlement.STRONGHOLD
+        and friendly_units
+        and enemy_units
+        and enemy_controlled_settlement
+    )
+
+    return besieging or not (enemy_units or enemy_controlled_settlement)
+
+
+def is_free_for_movement(region: Region, side: Side, game: GameData) -> bool:
+    if is_free(region, side, game):
+        return True
+
+    enemy = Side.SHADOW if side is Side.FREE else Side.FREE
+    enemy_units = any(game.armies.with_location(region).with_side(enemy).units_only())
+    enemy_controlled_settlement = region.settlement is not None and (
+        (region.nation in NATIONS[side]) == (region in game.conquered)
+    )
+
+    return enemy_controlled_settlement and not enemy_units

@@ -21,6 +21,10 @@ from war_of_the_ring_ai.constants import (
 class Placeable:
     location: Region
 
+    @property
+    def in_play(self) -> bool:
+        return self.location not in (FELLOWSHIP, REINFORCEMENTS, CASUALTIES)
+
 
 @dataclass
 class ArmyUnit(Placeable):
@@ -58,6 +62,12 @@ class Region:
         return self.name
 
 
+FELLOWSHIP = Region("Fellowship")
+REINFORCEMENTS = Region("Reinforcements")
+CASUALTIES = Region("Casualties")
+MORDOR = Region("Mordor")
+
+
 @dataclass(frozen=True)
 class RegionCollection:
     regions: Iterable[Region]
@@ -84,6 +94,40 @@ class RegionCollection:
         return RegionCollection(
             region for region in self.regions if region.settlement is not None
         )
+
+
+@dataclass(frozen=True)
+class ArmyUnitCollection:
+    units: Iterable[ArmyUnit]
+
+    def __iter__(self) -> Iterator[ArmyUnit]:
+        return iter(self.units)
+
+    def with_side(self, side: Side) -> ArmyUnitCollection:
+        return ArmyUnitCollection(
+            unit for unit in self.units if unit.nation in NATIONS[side]
+        )
+
+    def with_location(self, *regions: Region) -> ArmyUnitCollection:
+        return ArmyUnitCollection(
+            unit for unit in self.units if unit.location in regions
+        )
+
+    def with_nation(self, *nations: Nation) -> ArmyUnitCollection:
+        return ArmyUnitCollection(unit for unit in self.units if unit.nation in nations)
+
+    def with_rank(self, *ranks: UnitRank) -> ArmyUnitCollection:
+        return ArmyUnitCollection(unit for unit in self.units if unit.rank in ranks)
+
+    def units_only(self) -> ArmyUnitCollection:
+        return ArmyUnitCollection(
+            unit
+            for unit in self.units
+            if unit.rank in (UnitRank.REGULAR, UnitRank.ELITE)
+        )
+
+    def in_play_only(self) -> ArmyUnitCollection:
+        return ArmyUnitCollection(unit for unit in self.units if unit.in_play)
 
 
 @dataclass(frozen=True)

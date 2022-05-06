@@ -1,3 +1,4 @@
+from war_of_the_ring_ai.activities import is_free
 from war_of_the_ring_ai.constants import (
     NATIONS,
     SARUMAN_LOCATION,
@@ -9,13 +10,8 @@ from war_of_the_ring_ai.constants import (
     Settlement,
     Side,
 )
-from war_of_the_ring_ai.game_data import (
-    FELLOWSHIP,
-    MORDOR,
-    REINFORCEMENTS,
-    GameData,
-    PlayerData,
-)
+from war_of_the_ring_ai.game_data import GameData, PlayerData
+from war_of_the_ring_ai.game_objects import FELLOWSHIP, MORDOR, REINFORCEMENTS
 
 
 def can_do_action(action: Action, player: PlayerData, game: GameData) -> bool:
@@ -105,12 +101,10 @@ def can_muster_units(player: PlayerData, game: GameData) -> bool:
     ]
     for nation in at_war_nations:
         reinforcement_exists = any(
-            unit.nation is nation and unit.location is REINFORCEMENTS
-            for unit in game.armies
+            game.armies.with_nation(nation).with_location(REINFORCEMENTS)
         )
         location_exists = any(
-            # TODO This only checks conquered, not if the region is free
-            region not in game.conquered
+            is_free(region, player.public.side, game)
             for region in game.regions.all_regions()
             .with_nation(nation)
             .with_any_settlement()
@@ -139,10 +133,7 @@ def can_muster_witch_king(player: PlayerData, game: GameData) -> bool:
         and witch_king.location is REINFORCEMENTS
         and game.politics[Nation.SAURON].is_at_war
         and free_nation_at_war
-        and any(
-            unit.nation is Nation.SAURON and unit.location is not REINFORCEMENTS
-            for unit in game.armies
-        )
+        and any(game.armies.with_nation(Nation.SAURON).units_only().in_play_only())
     )
 
 
