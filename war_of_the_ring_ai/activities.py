@@ -111,20 +111,30 @@ def can_pass(active_player: PlayerData, inactive_player: PlayerData) -> bool:
     return len(active_player.public.dice) < len(inactive_player.public.dice)
 
 
-def is_free(region: Region, side: Side, game: GameData) -> bool:
+def is_under_siege(region: Region, side: Side, game: GameData) -> bool:
+    if region.settlement is not Settlement.STRONGHOLD:
+        return False
+
+    enemy = Side.SHADOW if side is Side.FREE else Side.FREE
     friendly_units = any(game.armies.with_location(region).with_side(side).units_only())
+    enemy_units = any(game.armies.with_location(region).with_side(enemy).units_only())
+    enemy_controlled = (region.nation in NATIONS[side]) == (region in game.conquered)
+
+    return (
+        region.settlement is Settlement.STRONGHOLD
+        and friendly_units
+        and enemy_units
+        and not enemy_controlled
+    )
+
+
+def is_free(region: Region, side: Side, game: GameData) -> bool:
     enemy = Side.SHADOW if side is Side.FREE else Side.FREE
     enemy_units = any(game.armies.with_location(region).with_side(enemy).units_only())
     enemy_controlled_settlement = region.settlement is not None and (
         (region.nation in NATIONS[side]) == (region in game.conquered)
     )
-    besieging = (
-        region.settlement is Settlement.STRONGHOLD
-        and friendly_units
-        and enemy_units
-        and enemy_controlled_settlement
-    )
-
+    besieging = is_under_siege(region, enemy, game)
     return besieging or not (enemy_units or enemy_controlled_settlement)
 
 
