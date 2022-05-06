@@ -70,7 +70,7 @@ def maximum_hunt_dice(game: GameData) -> int:
 
 def rollable_dice(player: PlayerData, game: GameData) -> int:
     hero_dice = sum(
-        1 for _ in game.characters.with_ids(*HEROES[player.public.side]).in_play_only()
+        1 for _ in game.characters.with_ids(*HEROES[player.public.side]).in_play()
     )
     allocated_eyes = game.hunt_box.eyes if player.public.side is Side.SHADOW else 0
     return player.public.starting_dice + hero_dice - allocated_eyes

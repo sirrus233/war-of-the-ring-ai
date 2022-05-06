@@ -50,6 +50,10 @@ class Character(Placeable):
     def __repr__(self) -> str:
         return f"{self.id.name} ({self.location.name})"
 
+    @property
+    def can_move(self) -> bool:
+        return self.level > 0
+
 
 @dataclass(frozen=True)
 class Region:
@@ -98,7 +102,12 @@ class CharacterCollection:
             character for character in self.characters if character.level == level
         )
 
-    def in_play_only(self) -> CharacterCollection:
+    def can_move(self) -> CharacterCollection:
+        return CharacterCollection(
+            character for character in self.characters if character.can_move
+        )
+
+    def in_play(self) -> CharacterCollection:
         return CharacterCollection(
             character for character in self.characters if character.in_play
         )
@@ -162,8 +171,11 @@ class ArmyUnitCollection:
             if unit.rank in (UnitRank.REGULAR, UnitRank.ELITE)
         )
 
-    def in_play_only(self) -> ArmyUnitCollection:
+    def in_play(self) -> ArmyUnitCollection:
         return ArmyUnitCollection(unit for unit in self.units if unit.in_play)
+
+    def nazgul(self) -> ArmyUnitCollection:
+        return ArmyUnitCollection(unit for unit in self.units if unit.is_nazgul)
 
 
 @dataclass(frozen=True)

@@ -1,10 +1,11 @@
-from war_of_the_ring_ai.activities import is_free
+from war_of_the_ring_ai.activities import is_free, is_under_siege
 from war_of_the_ring_ai.constants import (
     NATIONS,
     SARUMAN_LOCATION,
     Action,
     CardType,
     CharacterID,
+    CharacterType,
     DeckType,
     Nation,
     Settlement,
@@ -133,7 +134,7 @@ def can_muster_witch_king(player: PlayerData, game: GameData) -> bool:
         and witch_king.location is REINFORCEMENTS
         and game.politics[Nation.SAURON].is_at_war
         and free_nation_at_war
-        and any(game.armies.with_nation(Nation.SAURON).units_only().in_play_only())
+        and any(game.armies.with_nation(Nation.SAURON).units_only().in_play())
     )
 
 
@@ -184,11 +185,30 @@ def can_separate_companions(player: PlayerData, game: GameData) -> bool:
 
 
 def can_move_companions(player: PlayerData, game: GameData) -> bool:
-    raise NotImplementedError()
+    if player.public.side is not Side.FREE:
+        return False
+
+    companions = game.characters.with_type(CharacterType.COMPANION).can_move().in_play()
+    return any(
+        not is_under_siege(companion.location, Side.FREE, game)
+        for companion in companions
+    )
 
 
 def can_move_minions(player: PlayerData, game: GameData) -> bool:
-    raise NotImplementedError()
+    if player.public.side is not Side.SHADOW:
+        return False
+
+    if any(game.armies.nazgul().in_play()):
+        return True
+
+    if game.characters.with_id(CharacterID.WITCH_KING).in_play:
+        return True
+
+    minions = game.characters.with_type(CharacterType.MINION).can_move().in_play()
+    return any(
+        not is_under_siege(minion.location, Side.FREE, game) for minion in minions
+    )
 
 
 def can_muster_gandalf(player: PlayerData, game: GameData) -> bool:
