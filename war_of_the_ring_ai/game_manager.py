@@ -94,6 +94,7 @@ def hunt_allocation_phase(context: GameContext) -> None:
     eyes = agent.ask("AllocateEyes", list(range(minimum, maximum + 1)))
     context.game.hunt_box.character = 0
     context.game.hunt_box.eyes = eyes
+    context.game.fellowship.moved = False
 
 
 def roll_phase(context: GameContext) -> None:

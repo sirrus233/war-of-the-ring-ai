@@ -155,7 +155,7 @@ def move_fellowship_flow(context: GameContext) -> None:
 
 
 def hide_fellowship_flow(context: GameContext) -> None:
-    raise NotImplementedError()
+    context.game.fellowship.is_revealed = False
 
 
 def separate_companions_flow(context: GameContext) -> None:
