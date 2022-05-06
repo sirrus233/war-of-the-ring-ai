@@ -5,7 +5,6 @@ from war_of_the_ring_ai.constants import (
     Action,
     CardType,
     CharacterID,
-    CharacterType,
     DeckType,
     Nation,
     Settlement,
@@ -188,7 +187,7 @@ def can_move_companions(player: PlayerData, game: GameData) -> bool:
     if player.public.side is not Side.FREE:
         return False
 
-    companions = game.characters.with_type(CharacterType.COMPANION).can_move().in_play()
+    companions = game.characters.with_side(Side.FREE).can_move().in_play()
     return any(
         not is_under_siege(companion.location, Side.FREE, game)
         for companion in companions
@@ -205,7 +204,7 @@ def can_move_minions(player: PlayerData, game: GameData) -> bool:
     if game.characters.with_id(CharacterID.WITCH_KING).in_play:
         return True
 
-    minions = game.characters.with_type(CharacterType.MINION).can_move().in_play()
+    minions = game.characters.with_side(Side.SHADOW).can_move().in_play()
     return any(
         not is_under_siege(minion.location, Side.FREE, game) for minion in minions
     )

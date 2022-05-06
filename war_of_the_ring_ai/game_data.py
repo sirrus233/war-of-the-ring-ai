@@ -8,7 +8,6 @@ from war_of_the_ring_ai.constants import (
     INITIAL_GUIDE_ID,
     CardType,
     CharacterID,
-    CharacterType,
     DeckType,
     DieResult,
     Nation,
@@ -284,11 +283,11 @@ def init_characters() -> list[Character]:
 
     with open("data/characters.csv", newline="", encoding="utf8") as csvfile:
         reader = csv.reader(csvfile, delimiter="|")
-        for character_id, location_str, character_type, level, leadership in reader:
+        for character_id, location_str, side, level, leadership in reader:
             character = Character(
                 FELLOWSHIP if location_str == "IN_FELLOWSHIP" else REINFORCEMENTS,
                 CharacterID[character_id],
-                CharacterType[character_type],
+                Side[side],
                 int(level),
                 int(leadership),
             )

@@ -39,11 +39,6 @@ class CharacterID(Enum):
     GOLLUM = auto()
 
 
-class CharacterType(Enum):
-    COMPANION = auto()
-    MINION = auto()
-
-
 class DieResult(Enum):
     CHARACTER = auto()
     ARMY = auto()

@@ -9,7 +9,6 @@ from war_of_the_ring_ai.constants import (
     SHELOB_CORRUPTION_FLAG,
     CardType,
     CharacterID,
-    CharacterType,
     Nation,
     Settlement,
     Side,
@@ -43,7 +42,7 @@ class ArmyUnit(Placeable):
 @dataclass
 class Character(Placeable):
     id: CharacterID
-    type: CharacterType
+    side: Side
     level: int
     leadership: int
 
@@ -92,9 +91,9 @@ class CharacterCollection:
             character for character in self.characters if character.location in regions
         )
 
-    def with_type(self, type_: CharacterType) -> CharacterCollection:
+    def with_side(self, side: Side) -> CharacterCollection:
         return CharacterCollection(
-            character for character in self.characters if character.type is type_
+            character for character in self.characters if character.side is side
         )
 
     def with_level(self, level: int) -> CharacterCollection:
