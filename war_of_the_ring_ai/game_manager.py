@@ -1,7 +1,7 @@
-from dataclasses import dataclass
-from typing import Iterable, Mapping, Optional
+from typing import Iterable, Optional
 
 from war_of_the_ring_ai.action_checks import can_do_action
+from war_of_the_ring_ai.action_flows import do_action
 from war_of_the_ring_ai.activities import (
     action_dice_remaining,
     can_pass,
@@ -16,7 +16,7 @@ from war_of_the_ring_ai.activities import (
     valid_elven_ring_changes,
     valid_guides,
 )
-from war_of_the_ring_ai.agent import Agent, HumanAgent, RandomAgent
+from war_of_the_ring_ai.agent import HumanAgent, RandomAgent
 from war_of_the_ring_ai.constants import (
     ACTIONS,
     FREE_VP_GOAL,
@@ -29,6 +29,7 @@ from war_of_the_ring_ai.constants import (
     Side,
     Victory,
 )
+from war_of_the_ring_ai.context import GameContext
 from war_of_the_ring_ai.game_data import (
     GameData,
     PlayerData,
@@ -36,25 +37,6 @@ from war_of_the_ring_ai.game_data import (
     init_public_player_data,
 )
 from war_of_the_ring_ai.game_objects import MORDOR
-
-
-@dataclass
-class GameContext:
-    game: GameData
-    players: Mapping[Side, PlayerData]
-    agents: Mapping[Side, Agent]
-
-    @property
-    def active_player(self) -> PlayerData:
-        return self.players[self.game.active_side]
-
-    @property
-    def active_agent(self) -> Agent:
-        return self.agents[self.game.active_side]
-
-    @property
-    def inactive_player(self) -> PlayerData:
-        return self.players[self.game.inactive_side]
 
 
 def main() -> None:
@@ -233,9 +215,8 @@ def choose_action_flow(context: GameContext) -> Action:
     return context.active_agent.ask("ChooseAction", valid_actions)
 
 
-def do_action_flow(_context: GameContext, _action: Action) -> Optional[Victory]:
-    # TODO Fill out actions
-    pass
+def do_action_flow(context: GameContext, action: Action) -> Optional[Victory]:
+    return do_action(action, context)
 
 
 def end_action_flow(context: GameContext) -> None:
