@@ -2,12 +2,15 @@ from typing import Iterable, Optional
 
 from war_of_the_ring_ai.activities import discard, draw
 from war_of_the_ring_ai.constants import (
+    GANDALF_LOCATION,
     MAX_HAND_SIZE,
     NATIONS,
     SARUMAN_LOCATION,
     Action,
     CharacterID,
     DeckType,
+    Nation,
+    Settlement,
     Side,
     Victory,
 )
@@ -168,7 +171,22 @@ def move_minions_flow(context: GameContext) -> None:
 
 
 def muster_gandalf_flow(context: GameContext) -> None:
-    raise NotImplementedError()
+    gandalf_grey = context.game.characters.with_id(CharacterID.GANDALF_GREY)
+    gandalf_white = context.game.characters.with_id(CharacterID.GANDALF_WHITE)
+    if gandalf_grey.in_play:
+        gandalf_white.location = gandalf_grey.location
+        gandalf_grey.location = CASUALTIES
+    else:
+        fangorn = [context.game.regions.get_region(GANDALF_LOCATION)]
+        elves = [
+            region
+            for region in context.game.regions.all_regions()
+            .with_nation(Nation.ELVES)
+            .with_settlement(Settlement.STRONGHOLD)
+            if region not in context.game.conquered
+        ]
+        location = context.active_agent.ask("GandalfWhite", fangorn + elves)
+        gandalf_white.location = location
 
 
 def muster_aragorn_flow(context: GameContext) -> None:
