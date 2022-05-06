@@ -54,6 +54,29 @@ class Character(Placeable):
         return self.level > 0
 
 
+@dataclass
+class Army:
+    units: ArmyUnitCollection
+    characters: CharacterCollection
+
+    @property
+    def is_combat_army(self) -> bool:
+        return any(self.units.units_only())
+
+    @property
+    def has_mobile_leadership(self) -> bool:
+        return self.leadership > 0 and (
+            any(self.units.with_rank(UnitRank.LEADER))
+            or any(self.characters.can_move())
+        )
+
+    @property
+    def leadership(self) -> int:
+        unit_leadership = sum(1 for unit in self.units if unit.rank is UnitRank.LEADER)
+        char_leadership = sum(character.leadership for character in self.characters)
+        return unit_leadership + char_leadership
+
+
 @dataclass(frozen=True)
 class Region:
     name: str

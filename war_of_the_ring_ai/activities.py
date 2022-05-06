@@ -12,7 +12,7 @@ from war_of_the_ring_ai.constants import (
     Side,
 )
 from war_of_the_ring_ai.game_data import GameData, PlayerData
-from war_of_the_ring_ai.game_objects import FELLOWSHIP, Card, Character, Region
+from war_of_the_ring_ai.game_objects import FELLOWSHIP, Army, Card, Character, Region
 
 
 def draw(player: PlayerData, deck: DeckType) -> None:
@@ -150,3 +150,10 @@ def is_free_for_movement(region: Region, side: Side, game: GameData) -> bool:
     )
 
     return enemy_controlled_settlement and not enemy_units
+
+
+def get_army(region: Region, side: Side, game: GameData) -> Army:
+    return Army(
+        units=game.armies.with_side(side).with_location(region),
+        characters=game.characters.with_side(side).with_location(region),
+    )
