@@ -14,6 +14,7 @@ from war_of_the_ring_ai.constants import (
     Nation,
     Settlement,
     Side,
+    UnitRank,
 )
 from war_of_the_ring_ai.game_data import GameData, PlayerData
 from war_of_the_ring_ai.game_objects import FELLOWSHIP, MORDOR, REINFORCEMENTS
@@ -203,17 +204,17 @@ def can_attack(player: PlayerData, game: GameData) -> bool:
     enemy = Side.SHADOW if side is Side.FREE else Side.FREE
 
     for region in game.regions.all_regions():
-        if get_army(region, side, game).is_combat_army:
-            if is_under_siege(region, enemy, game):
-                return True
-            if any(
-                not is_under_siege(neighbor, enemy, game)
-                and any(
-                    game.armies.with_side(enemy).with_location(neighbor).units_only()
-                )
-                for neighbor in game.regions.neighbors(region)
-            ):
-                return True
+        army = get_army(region, side, game)
+        unit_at_war = any(game.politics[unit.nation].is_at_war for unit in army.units)
+        besieging = is_under_siege(region, enemy, game)
+        target_exists = any(
+            not is_under_siege(neighbor, enemy, game)
+            and get_army(neighbor, enemy, game).is_combat_army
+            for neighbor in game.regions.neighbors(region)
+        )
+
+        if army.is_combat_army and unit_at_war and (besieging or target_exists):
+            return True
 
     return False
 
@@ -224,17 +225,19 @@ def can_leader_attack(player: PlayerData, game: GameData) -> bool:
 
     for region in game.regions.all_regions():
         army = get_army(region, side, game)
-        if army.is_combat_army and army.leadership > 0:
-            if is_under_siege(region, enemy, game):
-                return True
-            if any(
-                not is_under_siege(neighbor, enemy, game)
-                and any(
-                    game.armies.with_side(enemy).with_location(neighbor).units_only()
-                )
-                for neighbor in game.regions.neighbors(region)
-            ):
-                return True
+        leader_at_war = any(army.characters) or any(
+            game.politics[unit.nation].is_at_war
+            for unit in army.units.with_rank(UnitRank.LEADER)
+        )
+        besieging = is_under_siege(region, enemy, game)
+        target_exists = any(
+            not is_under_siege(neighbor, enemy, game)
+            and get_army(neighbor, enemy, game).is_combat_army
+            for neighbor in game.regions.neighbors(region)
+        )
+
+        if army.is_combat_army and leader_at_war and (besieging or target_exists):
+            return True
 
     return False
 
