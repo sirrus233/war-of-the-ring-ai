@@ -167,12 +167,33 @@ def can_move_armies(player: PlayerData, game: GameData) -> bool:
     ]
 
     for region in regions:
-        if get_army(region, side, game).is_combat_army:
-            if any(
-                is_free_for_movement(neighbor, side, game)
-                for neighbor in game.regions.neighbors(region)
-            ):
-                return True
+        army = get_army(region, side, game)
+        target_exists = any(
+            is_free_for_movement(neighbor, side, game)
+            for neighbor in game.regions.neighbors(region)
+        )
+        if army.is_combat_army and target_exists:
+            return True
+
+    return False
+
+
+def can_leader_move(player: PlayerData, game: GameData) -> bool:
+    side = player.public.side
+    regions = [
+        region
+        for region in game.regions.all_regions()
+        if not is_under_siege(region, side, game)
+    ]
+
+    for region in regions:
+        army = get_army(region, side, game)
+        target_exists = any(
+            is_free_for_movement(neighbor, side, game)
+            for neighbor in game.regions.neighbors(region)
+        )
+        if army.is_combat_army and army.has_mobile_leadership and target_exists:
+            return True
 
     return False
 
@@ -190,26 +211,6 @@ def can_attack(player: PlayerData, game: GameData) -> bool:
                 and any(
                     game.armies.with_side(enemy).with_location(neighbor).units_only()
                 )
-                for neighbor in game.regions.neighbors(region)
-            ):
-                return True
-
-    return False
-
-
-def can_leader_move(player: PlayerData, game: GameData) -> bool:
-    side = player.public.side
-    regions = [
-        region
-        for region in game.regions.all_regions()
-        if not is_under_siege(region, side, game)
-    ]
-
-    for region in regions:
-        army = get_army(region, side, game)
-        if army.is_combat_army and army.has_mobile_leadership:
-            if any(
-                is_free_for_movement(neighbor, side, game)
                 for neighbor in game.regions.neighbors(region)
             ):
                 return True
