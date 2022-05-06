@@ -133,10 +133,7 @@ class Action(Enum):
     PLAY_ARMY_EVENT = auto()
     PLAY_MUSTER_EVENT = auto()
     DIPLOMACY = auto()
-    MUSTER_ELITE = auto()
-    MUSTER_REGULAR_REGULAR = auto()
-    MUSTER_REGULAR_LEADER = auto()
-    MUSTER_LEADER_LEADER = auto()
+    MUSTER_UNITS = auto()
     MUSTER_SARUMAN = auto()
     MUSTER_WITCH_KING = auto()
     MUSTER_MOUTH_OF_SAURON = auto()
@@ -176,10 +173,7 @@ ACTIONS = {
     DieResult.MUSTER: (
         Action.SKIP,
         Action.DIPLOMACY,
-        Action.MUSTER_ELITE,
-        Action.MUSTER_REGULAR_REGULAR,
-        Action.MUSTER_REGULAR_LEADER,
-        Action.MUSTER_LEADER_LEADER,
+        Action.MUSTER_UNITS,
         Action.MUSTER_SARUMAN,
         Action.MUSTER_WITCH_KING,
         Action.MUSTER_MOUTH_OF_SAURON,
@@ -197,7 +191,8 @@ ACTIONS = {
 INITIAL_GUIDE_ID = CharacterID.GANDALF_GREY
 FELLOWSHIP_START = "Rivendell"
 MORDOR_ENTRANCES = ("Morannon", "Minas Morgul")
-ARAGORN_LOCATIONS = ("Dol Amroth", "Minas Tirith", "Pelargir")
+GANDALF_LOCATION = "Fangorn"
+SARUMAN_LOCATION = "Orthanc"
 
 EYE_CORRUPTION_FLAG = 100
 SHELOB_CORRUPTION_FLAG = 200

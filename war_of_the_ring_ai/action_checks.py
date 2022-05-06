@@ -1,13 +1,13 @@
 from war_of_the_ring_ai.constants import (
-    ARAGORN_LOCATIONS,
     NATIONS,
+    SARUMAN_LOCATION,
     Action,
     CardType,
     CharacterID,
     DeckType,
     Nation,
+    Settlement,
     Side,
-    UnitRank,
 )
 from war_of_the_ring_ai.game_data import (
     FELLOWSHIP,
@@ -34,14 +34,8 @@ def can_do_action(action: Action, player: PlayerData, game: GameData) -> bool:
             result = can_play_muster_event(player)
         case Action.DIPLOMACY:
             result = can_diplomacy(player, game)
-        case Action.MUSTER_ELITE:
-            result = can_muster_elite(player, game)
-        case Action.MUSTER_REGULAR_REGULAR:
-            result = can_muster_regular_regular(player, game)
-        case Action.MUSTER_REGULAR_LEADER:
-            result = can_muster_regular_leader(player, game)
-        case Action.MUSTER_LEADER_LEADER:
-            result = can_muster_leader_leader(player, game)
+        case Action.MUSTER_UNITS:
+            result = can_muster_units(player, game)
         case Action.MUSTER_SARUMAN:
             result = can_muster_saruman(player, game)
         case Action.MUSTER_WITCH_KING:
@@ -103,31 +97,27 @@ def can_diplomacy(player: PlayerData, game: GameData) -> bool:
     return any(game.politics[nation].can_advance for nation in nations)
 
 
-def can_muster_elite(player: PlayerData, game: GameData) -> bool:
+def can_muster_units(player: PlayerData, game: GameData) -> bool:
     at_war_nations = [
         nation
         for nation in NATIONS[player.public.side]
         if game.politics[nation].is_at_war
     ]
-    # TODO This is insufficient. You need a unit to muster, AND a place to put it.
-    return any(
-        unit.location is REINFORCEMENTS
-        and unit.rank is UnitRank.ELITE
-        and unit.nation in at_war_nations
-        for unit in game.armies
-    )
-
-
-def can_muster_regular_regular(player: PlayerData, game: GameData) -> bool:
-    raise NotImplementedError()
-
-
-def can_muster_regular_leader(player: PlayerData, game: GameData) -> bool:
-    raise NotImplementedError()
-
-
-def can_muster_leader_leader(player: PlayerData, game: GameData) -> bool:
-    raise NotImplementedError()
+    for nation in at_war_nations:
+        reinforcement_exists = any(
+            unit.nation is nation and unit.location is REINFORCEMENTS
+            for unit in game.armies
+        )
+        location_exists = any(
+            # TODO This only checks conquered, not if the region is free
+            region not in game.conquered
+            for region in game.regions.all_regions()
+            .with_nation(nation)
+            .with_any_settlement()
+        )
+        if reinforcement_exists and location_exists:
+            return True
+    return False
 
 
 def can_muster_saruman(player: PlayerData, game: GameData) -> bool:
@@ -136,6 +126,7 @@ def can_muster_saruman(player: PlayerData, game: GameData) -> bool:
         player.public.side is Side.SHADOW
         and saruman.location is REINFORCEMENTS
         and game.politics[Nation.ISENGARD].is_at_war
+        and game.regions.get_region(SARUMAN_LOCATION) not in game.conquered
     )
 
 
@@ -148,6 +139,10 @@ def can_muster_witch_king(player: PlayerData, game: GameData) -> bool:
         and witch_king.location is REINFORCEMENTS
         and game.politics[Nation.SAURON].is_at_war
         and free_nation_at_war
+        and any(
+            unit.nation is Nation.SAURON and unit.location is not REINFORCEMENTS
+            for unit in game.armies
+        )
     )
 
 
@@ -158,6 +153,12 @@ def can_muster_mouth_of_sauron(player: PlayerData, game: GameData) -> bool:
         player.public.side is Side.SHADOW
         and mouth_of_sauron.location is REINFORCEMENTS
         and (all_nations_at_war or game.fellowship.location is MORDOR)
+        and any(
+            region not in game.conquered
+            for region in game.regions.all_regions()
+            .with_nation(Nation.SAURON)
+            .with_settlement(Settlement.STRONGHOLD)
+        )
     )
 
 
@@ -221,9 +222,15 @@ def can_muster_gandalf(player: PlayerData, game: GameData) -> bool:
 def can_muster_aragorn(player: PlayerData, game: GameData) -> bool:
     aragorn = game.characters[CharacterID.ARAGORN]
     strider = game.characters[CharacterID.STRIDER]
+    muster_locations = (
+        game.regions.all_regions()
+        .with_nation(Nation.GONDOR)
+        .with_settlement(Settlement.CITY, Settlement.STRONGHOLD)
+    )
+
     return (
         player.public.side is Side.FREE
         and aragorn.location is REINFORCEMENTS
-        and strider.location.name in ARAGORN_LOCATIONS
+        and strider.location in muster_locations
         and strider.location not in game.conquered
     )

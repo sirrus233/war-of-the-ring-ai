@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Iterable, Iterator, Optional
 
 from war_of_the_ring_ai.constants import (
     EYE_CORRUPTION_FLAG,
+    NATIONS,
     SHELOB_CORRUPTION_FLAG,
     CardType,
     CharacterID,
@@ -55,6 +56,34 @@ class Region:
 
     def __repr__(self) -> str:
         return self.name
+
+
+@dataclass(frozen=True)
+class RegionCollection:
+    regions: Iterable[Region]
+
+    def __iter__(self) -> Iterator[Region]:
+        return iter(self.regions)
+
+    def with_side(self, side: Side) -> RegionCollection:
+        return RegionCollection(
+            region for region in self.regions if region.nation in NATIONS[side]
+        )
+
+    def with_nation(self, *nations: Nation) -> RegionCollection:
+        return RegionCollection(
+            region for region in self.regions if region.nation in nations
+        )
+
+    def with_settlement(self, *settlements: Settlement) -> RegionCollection:
+        return RegionCollection(
+            region for region in self.regions if region.settlement in settlements
+        )
+
+    def with_any_settlement(self) -> RegionCollection:
+        return RegionCollection(
+            region for region in self.regions if region.settlement is not None
+        )
 
 
 @dataclass(frozen=True)

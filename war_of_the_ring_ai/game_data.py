@@ -16,7 +16,14 @@ from war_of_the_ring_ai.constants import (
     Side,
     UnitRank,
 )
-from war_of_the_ring_ai.game_objects import ArmyUnit, Card, Character, HuntTile, Region
+from war_of_the_ring_ai.game_objects import (
+    ArmyUnit,
+    Card,
+    Character,
+    HuntTile,
+    Region,
+    RegionCollection,
+)
 
 FELLOWSHIP = Region("Fellowship")
 REINFORCEMENTS = Region("Reinforcements")
@@ -40,6 +47,9 @@ class RegionMap:
 
     def get_region(self, name: str) -> Region:
         return self._regions_by_name[name]
+
+    def all_regions(self) -> RegionCollection:
+        return RegionCollection(self._regions.keys())
 
     def neighbors(self, region: Region) -> list[Region]:
         return self._regions[region]
