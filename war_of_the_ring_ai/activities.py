@@ -116,8 +116,9 @@ def is_under_siege(region: Region, side: Side, game: GameData) -> bool:
         return False
 
     enemy = Side.SHADOW if side is Side.FREE else Side.FREE
-    friendly_units = any(game.armies.with_location(region).with_side(side).units_only())
-    enemy_units = any(game.armies.with_location(region).with_side(enemy).units_only())
+    units_in_region = game.armies.with_location(region).units_only()
+    friendly_units = any(units_in_region.with_side(side))
+    enemy_units = any(units_in_region.with_side(enemy))
     enemy_controlled = (region.nation in NATIONS[side]) == (region in game.conquered)
 
     return (
