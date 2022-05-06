@@ -23,6 +23,7 @@ from war_of_the_ring_ai.game_objects import (
     ArmyUnitCollection,
     Card,
     Character,
+    CharacterCollection,
     HuntTile,
     Region,
     RegionCollection,
@@ -169,12 +170,13 @@ class GameData:  # pylint: disable=too-many-instance-attributes
         self.armies: ArmyUnitCollection = ArmyUnitCollection(
             init_armies(self.regions) + init_reinforcements()
         )
-        self.characters: dict[CharacterID, Character] = init_characters()
+        self.characters: CharacterCollection = CharacterCollection(init_characters())
         self.politics: dict[Nation, PoliticalStatus] = init_politics()
         self.hunt_pool: HuntPool = init_hunt_pool()
         self.hunt_box = HuntBox()
         self.fellowship = Fellowship(
-            self.characters[INITIAL_GUIDE_ID], self.regions.get_region(FELLOWSHIP_START)
+            self.characters.with_id(INITIAL_GUIDE_ID),
+            self.regions.get_region(FELLOWSHIP_START),
         )
         self.players: Mapping[Side, PublicPlayerData] = {
             Side.FREE: free,
@@ -277,8 +279,8 @@ def init_reinforcements() -> list[ArmyUnit]:
     return armies
 
 
-def init_characters() -> dict[CharacterID, Character]:
-    characters: dict[CharacterID, Character] = {}
+def init_characters() -> list[Character]:
+    characters: list[Character] = []
 
     with open("data/characters.csv", newline="", encoding="utf8") as csvfile:
         reader = csv.reader(csvfile, delimiter="|")
@@ -290,7 +292,7 @@ def init_characters() -> dict[CharacterID, Character]:
                 int(level),
                 int(leadership),
             )
-            characters[character.id] = character
+            characters.append(character)
 
     return characters
 

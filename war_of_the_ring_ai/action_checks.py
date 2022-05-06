@@ -115,7 +115,7 @@ def can_muster_units(player: PlayerData, game: GameData) -> bool:
 
 
 def can_muster_saruman(player: PlayerData, game: GameData) -> bool:
-    saruman = game.characters[CharacterID.SARUMAN]
+    saruman = game.characters.with_id(CharacterID.SARUMAN)
     return (
         player.public.side is Side.SHADOW
         and saruman.location is REINFORCEMENTS
@@ -125,7 +125,7 @@ def can_muster_saruman(player: PlayerData, game: GameData) -> bool:
 
 
 def can_muster_witch_king(player: PlayerData, game: GameData) -> bool:
-    witch_king = game.characters[CharacterID.WITCH_KING]
+    witch_king = game.characters.with_id(CharacterID.WITCH_KING)
     free_nations = NATIONS[Side.FREE]
     free_nation_at_war = any(game.politics[nation].is_at_war for nation in free_nations)
     return (
@@ -138,7 +138,7 @@ def can_muster_witch_king(player: PlayerData, game: GameData) -> bool:
 
 
 def can_muster_mouth_of_sauron(player: PlayerData, game: GameData) -> bool:
-    mouth_of_sauron = game.characters[CharacterID.MOUTH_OF_SAURON]
+    mouth_of_sauron = game.characters.with_id(CharacterID.MOUTH_OF_SAURON)
     all_nations_at_war = all(status.is_at_war for status in game.politics.values())
     return (
         player.public.side is Side.SHADOW
@@ -179,7 +179,7 @@ def can_hide_fellowship(player: PlayerData, game: GameData) -> bool:
 
 def can_separate_companions(player: PlayerData, game: GameData) -> bool:
     return player.public.side is Side.FREE and any(
-        character.location is FELLOWSHIP for character in game.characters.values()
+        game.characters.with_location(FELLOWSHIP)
     )
 
 
@@ -192,16 +192,11 @@ def can_move_minions(player: PlayerData, game: GameData) -> bool:
 
 
 def can_muster_gandalf(player: PlayerData, game: GameData) -> bool:
-    gandalf_white = game.characters[CharacterID.GANDALF_WHITE]
-    gandalf_grey = game.characters[CharacterID.GANDALF_GREY]
-    minions = [
-        game.characters[character_id]
-        for character_id in (
-            CharacterID.SARUMAN,
-            CharacterID.WITCH_KING,
-            CharacterID.MOUTH_OF_SAURON,
-        )
-    ]
+    gandalf_white = game.characters.with_id(CharacterID.GANDALF_WHITE)
+    gandalf_grey = game.characters.with_id(CharacterID.GANDALF_GREY)
+    minions = game.characters.with_ids(
+        CharacterID.SARUMAN, CharacterID.WITCH_KING, CharacterID.MOUTH_OF_SAURON
+    )
     return (
         player.public.side is Side.FREE
         and gandalf_white.location is REINFORCEMENTS
@@ -211,8 +206,8 @@ def can_muster_gandalf(player: PlayerData, game: GameData) -> bool:
 
 
 def can_muster_aragorn(player: PlayerData, game: GameData) -> bool:
-    aragorn = game.characters[CharacterID.ARAGORN]
-    strider = game.characters[CharacterID.STRIDER]
+    aragorn = game.characters.with_id(CharacterID.ARAGORN)
+    strider = game.characters.with_id(CharacterID.STRIDER)
     muster_locations = (
         game.regions.all_regions()
         .with_nation(Nation.GONDOR)

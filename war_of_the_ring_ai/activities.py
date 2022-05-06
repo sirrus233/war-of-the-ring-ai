@@ -12,14 +12,7 @@ from war_of_the_ring_ai.constants import (
     Side,
 )
 from war_of_the_ring_ai.game_data import GameData, PlayerData
-from war_of_the_ring_ai.game_objects import (
-    CASUALTIES,
-    FELLOWSHIP,
-    REINFORCEMENTS,
-    Card,
-    Character,
-    Region,
-)
+from war_of_the_ring_ai.game_objects import FELLOWSHIP, Card, Character, Region
 
 
 def draw(player: PlayerData, deck: DeckType) -> None:
@@ -60,12 +53,11 @@ def fellowship_can_activate_nation(region: Region) -> bool:
 
 
 def valid_guides(game: GameData) -> list[Character]:
-    return [
-        character
-        for character in game.characters.values()
-        if character.location is FELLOWSHIP
-        and character.level == game.fellowship.guide.level
-    ]
+    return list(
+        game.characters.with_location(FELLOWSHIP).with_level(
+            game.fellowship.guide.level
+        )
+    )
 
 
 def minimum_hunt_dice(game: GameData) -> int:
@@ -73,17 +65,12 @@ def minimum_hunt_dice(game: GameData) -> int:
 
 
 def maximum_hunt_dice(game: GameData) -> int:
-    return sum(
-        1 for character in game.characters.values() if character.location is FELLOWSHIP
-    )
+    return sum(1 for _ in game.characters.with_location(FELLOWSHIP))
 
 
 def rollable_dice(player: PlayerData, game: GameData) -> int:
-    heroes = (
-        game.characters[character_id] for character_id in HEROES[player.public.side]
-    )
     hero_dice = sum(
-        1 for hero in heroes if hero.location not in (REINFORCEMENTS, CASUALTIES)
+        1 for _ in game.characters.with_ids(*HEROES[player.public.side]).in_play_only()
     )
     allocated_eyes = game.hunt_box.eyes if player.public.side is Side.SHADOW else 0
     return player.public.starting_dice + hero_dice - allocated_eyes

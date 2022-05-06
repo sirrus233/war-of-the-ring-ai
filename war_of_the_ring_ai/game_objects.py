@@ -69,6 +69,42 @@ MORDOR = Region("Mordor")
 
 
 @dataclass(frozen=True)
+class CharacterCollection:
+    characters: Iterable[Character]
+
+    def __iter__(self) -> Iterator[Character]:
+        return iter(self.characters)
+
+    def with_id(self, id_: CharacterID) -> Character:
+        return next(character for character in self.characters if character.id is id_)
+
+    def with_ids(self, *ids: CharacterID) -> CharacterCollection:
+        return CharacterCollection(
+            character for character in self.characters if character.id in ids
+        )
+
+    def with_location(self, *regions: Region) -> CharacterCollection:
+        return CharacterCollection(
+            character for character in self.characters if character.location in regions
+        )
+
+    def with_type(self, type_: CharacterType) -> CharacterCollection:
+        return CharacterCollection(
+            character for character in self.characters if character.type is type_
+        )
+
+    def with_level(self, level: int) -> CharacterCollection:
+        return CharacterCollection(
+            character for character in self.characters if character.level == level
+        )
+
+    def in_play_only(self) -> CharacterCollection:
+        return CharacterCollection(
+            character for character in self.characters if character.in_play
+        )
+
+
+@dataclass(frozen=True)
 class RegionCollection:
     regions: Iterable[Region]
 
