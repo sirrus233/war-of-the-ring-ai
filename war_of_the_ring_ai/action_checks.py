@@ -178,7 +178,23 @@ def can_move_armies(player: PlayerData, game: GameData) -> bool:
 
 
 def can_attack(player: PlayerData, game: GameData) -> bool:
-    raise NotImplementedError()
+    side = player.public.side
+    enemy = Side.SHADOW if side is Side.FREE else Side.FREE
+
+    for region in game.regions.all_regions():
+        if get_army(region, side, game).is_combat_army:
+            if is_under_siege(region, enemy, game):
+                return True
+            if any(
+                not is_under_siege(neighbor, enemy, game)
+                and any(
+                    game.armies.with_side(enemy).with_location(neighbor).units_only()
+                )
+                for neighbor in game.regions.neighbors(region)
+            ):
+                return True
+
+    return False
 
 
 def can_leader_move(player: PlayerData, game: GameData) -> bool:
@@ -202,7 +218,24 @@ def can_leader_move(player: PlayerData, game: GameData) -> bool:
 
 
 def can_leader_attack(player: PlayerData, game: GameData) -> bool:
-    raise NotImplementedError()
+    side = player.public.side
+    enemy = Side.SHADOW if side is Side.FREE else Side.FREE
+
+    for region in game.regions.all_regions():
+        army = get_army(region, side, game)
+        if army.is_combat_army and army.leadership > 0:
+            if is_under_siege(region, enemy, game):
+                return True
+            if any(
+                not is_under_siege(neighbor, enemy, game)
+                and any(
+                    game.armies.with_side(enemy).with_location(neighbor).units_only()
+                )
+                for neighbor in game.regions.neighbors(region)
+            ):
+                return True
+
+    return False
 
 
 def can_move_fellowship(player: PlayerData, game: GameData) -> bool:
