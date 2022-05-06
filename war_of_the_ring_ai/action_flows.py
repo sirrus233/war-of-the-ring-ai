@@ -127,11 +127,28 @@ def muster_saruman_flow(context: GameContext) -> None:
 
 
 def muster_witch_king_flow(context: GameContext) -> None:
-    raise NotImplementedError()
+    witch_king = context.game.characters.with_id(CharacterID.WITCH_KING)
+    locations = [
+        unit.location
+        for unit in context.game.armies.with_nation(Nation.SAURON)
+        .units_only()
+        .in_play()
+    ]
+    location = context.active_agent.ask("WitchKing", locations)
+    witch_king.location = location
 
 
 def muster_mouth_of_sauron_flow(context: GameContext) -> None:
-    raise NotImplementedError()
+    mouth_of_sauron = context.game.characters.with_id(CharacterID.MOUTH_OF_SAURON)
+    locations = [
+        region
+        for region in context.game.regions.all_regions()
+        .with_nation(Nation.SAURON)
+        .with_settlement(Settlement.STRONGHOLD)
+        if region not in context.game.conquered
+    ]
+    location = context.active_agent.ask("MouthSauron", locations)
+    mouth_of_sauron.location = location
 
 
 def move_armies_flow(context: GameContext) -> None:
