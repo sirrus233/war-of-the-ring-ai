@@ -10,9 +10,17 @@ from war_of_the_ring_ai.constants import (
     DieResult,
     Settlement,
     Side,
+    UnitRank,
 )
 from war_of_the_ring_ai.game_data import GameData, PlayerData
-from war_of_the_ring_ai.game_objects import FELLOWSHIP, Army, Card, Character, Region
+from war_of_the_ring_ai.game_objects import (
+    FELLOWSHIP,
+    Army,
+    ArmyUnit,
+    Card,
+    Character,
+    Region,
+)
 
 
 def draw(player: PlayerData, deck: DeckType) -> None:
@@ -153,7 +161,17 @@ def is_free_for_movement(region: Region, side: Side, game: GameData) -> bool:
 
 
 def get_army(region: Region, side: Side, game: GameData) -> Army:
-    return Army(
-        units=game.armies.with_side(side).with_location(region),
-        characters=game.characters.with_side(side).with_location(region),
+    units_in_region = game.armies.with_side(side).with_location(region)
+    units = units_in_region.units_only()
+    leaders = units_in_region.with_rank(UnitRank.LEADER)
+    characters = game.characters.with_side(side).with_location(region)
+
+    return Army(units, leaders, characters)
+
+
+def unit_can_enter(unit: ArmyUnit, region: Region, game: GameData) -> bool:
+    return is_free_for_movement(region, unit.side, game) and (
+        region.nation is None
+        or unit.nation is region.nation
+        or game.politics[unit.nation].is_at_war
     )

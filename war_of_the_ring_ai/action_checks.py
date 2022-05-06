@@ -1,8 +1,8 @@
 from war_of_the_ring_ai.activities import (
     get_army,
     is_free,
-    is_free_for_movement,
     is_under_siege,
+    unit_can_enter,
 )
 from war_of_the_ring_ai.constants import (
     NATIONS,
@@ -14,10 +14,9 @@ from war_of_the_ring_ai.constants import (
     Nation,
     Settlement,
     Side,
-    UnitRank,
 )
 from war_of_the_ring_ai.game_data import GameData, PlayerData
-from war_of_the_ring_ai.game_objects import FELLOWSHIP, MORDOR, REINFORCEMENTS
+from war_of_the_ring_ai.game_objects import FELLOWSHIP, MORDOR, REINFORCEMENTS, Region
 
 
 def can_do_action(action: Action, player: PlayerData, game: GameData) -> bool:
@@ -161,40 +160,44 @@ def can_muster_mouth_of_sauron(player: PlayerData, game: GameData) -> bool:
 
 def can_move_armies(player: PlayerData, game: GameData) -> bool:
     side = player.public.side
-    regions = [
-        region
-        for region in game.regions.all_regions()
-        if not is_under_siege(region, side, game)
-    ]
+    start_regions: list[Region] = []
 
-    for region in regions:
+    for region in game.regions.all_regions():
         army = get_army(region, side, game)
-        target_exists = any(
-            is_free_for_movement(neighbor, side, game)
-            for neighbor in game.regions.neighbors(region)
-        )
-        if army.is_combat_army and target_exists:
-            return True
+        if army.is_combat_army and not is_under_siege(region, side, game):
+            start_regions.append(region)
+
+    for region in start_regions:
+        army = get_army(region, side, game)
+        for neighbor in game.regions.neighbors(region):
+            if any(unit_can_enter(unit, neighbor, game) for unit in army.units):
+                return True
 
     return False
 
 
 def can_leader_move(player: PlayerData, game: GameData) -> bool:
     side = player.public.side
-    regions = [
-        region
-        for region in game.regions.all_regions()
-        if not is_under_siege(region, side, game)
-    ]
+    start_regions: list[Region] = []
 
-    for region in regions:
+    for region in game.regions.all_regions():
         army = get_army(region, side, game)
-        target_exists = any(
-            is_free_for_movement(neighbor, side, game)
-            for neighbor in game.regions.neighbors(region)
-        )
-        if army.is_combat_army and army.has_mobile_leadership and target_exists:
-            return True
+        besieged = is_under_siege(region, side, game)
+        if army.is_combat_army and army.leadership > 0 and not besieged:
+            start_regions.append(region)
+
+    for region in start_regions:
+        army = get_army(region, side, game)
+        for neighbor in game.regions.neighbors(region):
+            moveable_unit = any(
+                unit_can_enter(unit, neighbor, game) for unit in army.units
+            )
+            moveable_leader = any(
+                unit_can_enter(leader, neighbor, game) for leader in army.leaders
+            )
+            moveable_character = any(army.characters.can_move())
+            if moveable_unit and (moveable_leader or moveable_character):
+                return True
 
     return False
 
@@ -226,8 +229,7 @@ def can_leader_attack(player: PlayerData, game: GameData) -> bool:
     for region in game.regions.all_regions():
         army = get_army(region, side, game)
         leader_at_war = any(army.characters) or any(
-            game.politics[unit.nation].is_at_war
-            for unit in army.units.with_rank(UnitRank.LEADER)
+            game.politics[leader.nation].is_at_war for leader in army.leaders
         )
         besieging = is_under_siege(region, enemy, game)
         target_exists = any(

@@ -38,6 +38,10 @@ class ArmyUnit(Placeable):
     def is_unit(self) -> bool:
         return self.rank in (UnitRank.REGULAR, UnitRank.ELITE)
 
+    @property
+    def side(self) -> Side:
+        return Side.FREE if self.nation in NATIONS[Side.FREE] else Side.SHADOW
+
 
 @dataclass
 class Character(Placeable):
@@ -57,22 +61,16 @@ class Character(Placeable):
 @dataclass
 class Army:
     units: ArmyUnitCollection
+    leaders: ArmyUnitCollection
     characters: CharacterCollection
 
     @property
     def is_combat_army(self) -> bool:
-        return any(self.units.units_only())
-
-    @property
-    def has_mobile_leadership(self) -> bool:
-        return self.leadership > 0 and (
-            any(self.units.with_rank(UnitRank.LEADER))
-            or any(self.characters.can_move())
-        )
+        return any(self.units)
 
     @property
     def leadership(self) -> int:
-        unit_leadership = sum(1 for unit in self.units if unit.rank is UnitRank.LEADER)
+        unit_leadership = sum(1 for _ in self.leaders)
         char_leadership = sum(character.leadership for character in self.characters)
         return unit_leadership + char_leadership
 
