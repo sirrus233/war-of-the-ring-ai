@@ -197,7 +197,24 @@ ACTIONS = {
         Action.PLAY_ARMY_EVENT,
         Action.PLAY_MUSTER_EVENT,
     ),
-    DieResult.WILL: (Action.SKIP, Action.MUSTER_GANDALF, Action.MUSTER_ARAGORN),
+    DieResult.WILL: (
+        Action.SKIP,
+        Action.MUSTER_GANDALF,
+        Action.MUSTER_ARAGORN,
+        Action.MOVE_FELLOWSHIP,
+        Action.HIDE_FELLOWSHIP,
+        Action.SEPARATE_COMPANIONS,
+        Action.MOVE_COMPANIONS,
+        Action.PLAY_CHARACTER_EVENT,
+        Action.MOVE_ARMIES,
+        Action.ATTACK,
+        Action.PLAY_ARMY_EVENT,
+        Action.DIPLOMACY,
+        Action.MUSTER_UNITS,
+        Action.PLAY_MUSTER_EVENT,
+        Action.DRAW_CHARACTER_EVENT,
+        Action.DRAW_STRATEGY_EVENT,
+    ),
 }
 
 INITIAL_GUIDE_ID = CharacterID.GANDALF_GREY
