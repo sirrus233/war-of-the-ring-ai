@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Iterator, Optional
+from typing import Iterator, Optional, Sequence
 
 from war_of_the_ring_ai.constants import (
     EYE_CORRUPTION_FLAG,
@@ -94,108 +94,106 @@ MORDOR = Region("Mordor")
 
 @dataclass(frozen=True)
 class CharacterCollection:
-    characters: Iterable[Character]
+    characters: Sequence[Character]
 
     def __iter__(self) -> Iterator[Character]:
         return iter(self.characters)
 
     def with_id(self, id_: CharacterID) -> Character:
-        return next(character for character in self.characters if character.id is id_)
+        return next(char for char in self.characters if char.id is id_)
 
     def with_ids(self, *ids: CharacterID) -> CharacterCollection:
-        return CharacterCollection(
-            character for character in self.characters if character.id in ids
-        )
+        return CharacterCollection([char for char in self.characters if char.id in ids])
 
     def with_location(self, *regions: Region) -> CharacterCollection:
         return CharacterCollection(
-            character for character in self.characters if character.location in regions
+            [char for char in self.characters if char.location in regions]
         )
 
     def with_side(self, side: Side) -> CharacterCollection:
         return CharacterCollection(
-            character for character in self.characters if character.side is side
+            [char for char in self.characters if char.side is side]
         )
 
     def with_level(self, level: int) -> CharacterCollection:
         return CharacterCollection(
-            character for character in self.characters if character.level == level
+            [char for char in self.characters if char.level == level]
         )
 
     def can_move(self) -> CharacterCollection:
-        return CharacterCollection(
-            character for character in self.characters if character.can_move
-        )
+        return CharacterCollection([char for char in self.characters if char.can_move])
 
     def in_play(self) -> CharacterCollection:
-        return CharacterCollection(
-            character for character in self.characters if character.in_play
-        )
+        return CharacterCollection([char for char in self.characters if char.in_play])
 
 
 @dataclass(frozen=True)
 class RegionCollection:
-    regions: Iterable[Region]
+    regions: Sequence[Region]
 
     def __iter__(self) -> Iterator[Region]:
         return iter(self.regions)
 
     def with_side(self, side: Side) -> RegionCollection:
         return RegionCollection(
-            region for region in self.regions if region.nation in NATIONS[side]
+            [region for region in self.regions if region.nation in NATIONS[side]]
         )
 
     def with_nation(self, *nations: Nation) -> RegionCollection:
         return RegionCollection(
-            region for region in self.regions if region.nation in nations
+            [region for region in self.regions if region.nation in nations]
         )
 
     def with_settlement(self, *settlements: Settlement) -> RegionCollection:
         return RegionCollection(
-            region for region in self.regions if region.settlement in settlements
+            [region for region in self.regions if region.settlement in settlements]
         )
 
     def with_any_settlement(self) -> RegionCollection:
         return RegionCollection(
-            region for region in self.regions if region.settlement is not None
+            [region for region in self.regions if region.settlement is not None]
         )
 
 
 @dataclass(frozen=True)
 class ArmyUnitCollection:
-    units: Iterable[ArmyUnit]
+    units: Sequence[ArmyUnit]
 
     def __iter__(self) -> Iterator[ArmyUnit]:
         return iter(self.units)
 
     def with_side(self, side: Side) -> ArmyUnitCollection:
         return ArmyUnitCollection(
-            unit for unit in self.units if unit.nation in NATIONS[side]
+            [unit for unit in self.units if unit.nation in NATIONS[side]]
         )
 
     def with_location(self, *regions: Region) -> ArmyUnitCollection:
         return ArmyUnitCollection(
-            unit for unit in self.units if unit.location in regions
+            [unit for unit in self.units if unit.location in regions]
         )
 
     def with_nation(self, *nations: Nation) -> ArmyUnitCollection:
-        return ArmyUnitCollection(unit for unit in self.units if unit.nation in nations)
+        return ArmyUnitCollection(
+            [unit for unit in self.units if unit.nation in nations]
+        )
 
     def with_rank(self, *ranks: UnitRank) -> ArmyUnitCollection:
-        return ArmyUnitCollection(unit for unit in self.units if unit.rank in ranks)
+        return ArmyUnitCollection([unit for unit in self.units if unit.rank in ranks])
 
     def units_only(self) -> ArmyUnitCollection:
         return ArmyUnitCollection(
-            unit
-            for unit in self.units
-            if unit.rank in (UnitRank.REGULAR, UnitRank.ELITE)
+            [
+                unit
+                for unit in self.units
+                if unit.rank in (UnitRank.REGULAR, UnitRank.ELITE)
+            ]
         )
 
     def in_play(self) -> ArmyUnitCollection:
-        return ArmyUnitCollection(unit for unit in self.units if unit.in_play)
+        return ArmyUnitCollection([unit for unit in self.units if unit.in_play])
 
     def nazgul(self) -> ArmyUnitCollection:
-        return ArmyUnitCollection(unit for unit in self.units if unit.is_nazgul)
+        return ArmyUnitCollection([unit for unit in self.units if unit.is_nazgul])
 
 
 @dataclass(frozen=True)
