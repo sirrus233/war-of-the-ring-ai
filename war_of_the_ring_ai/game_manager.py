@@ -1,12 +1,10 @@
-from typing import Iterable, Optional
+from typing import Optional
 
 from war_of_the_ring_ai.action_checks import can_do_action
-from war_of_the_ring_ai.action_flows import do_action
+from war_of_the_ring_ai.action_flows import do_action, draw_flow
 from war_of_the_ring_ai.activities import (
     action_dice_remaining,
     can_pass,
-    discard,
-    draw,
     fellowship_can_activate_nation,
     fellowship_can_heal,
     maximum_hunt_dice,
@@ -20,7 +18,6 @@ from war_of_the_ring_ai.agent import HumanAgent, RandomAgent
 from war_of_the_ring_ai.constants import (
     ACTIONS,
     FREE_VP_GOAL,
-    MAX_HAND_SIZE,
     MORDOR_ENTRANCES,
     SHADOW_VP_GOAL,
     Action,
@@ -125,18 +122,6 @@ def victory_check_phase(context: GameContext) -> Optional[Victory]:
     if context.players[Side.FREE].public.victory_points >= FREE_VP_GOAL:
         return Victory.FPMV
     return None
-
-
-def draw_flow(context: GameContext, side: Side, draws: Iterable[DeckType]) -> None:
-    player = context.players[side]
-    agent = context.agents[side]
-
-    for deck in draws:
-        draw(player, deck)
-
-    while len(player.private.hand) > MAX_HAND_SIZE:
-        card = agent.ask("Discarding", player.private.hand)
-        discard(player, card)
 
 
 def declare_fellowship_flow(context: GameContext) -> None:
