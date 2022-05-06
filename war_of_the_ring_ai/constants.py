@@ -151,14 +151,6 @@ class Action(Enum):
 
 
 ACTIONS = {
-    DieResult.PALANTIR: (
-        Action.SKIP,
-        Action.DRAW_CHARACTER_EVENT,
-        Action.DRAW_STRATEGY_EVENT,
-        Action.PLAY_CHARACTER_EVENT,
-        Action.PLAY_ARMY_EVENT,
-        Action.PLAY_MUSTER_EVENT,
-    ),
     DieResult.CHARACTER: (
         Action.SKIP,
         Action.LEADER_MOVE,
@@ -170,6 +162,12 @@ ACTIONS = {
         Action.MOVE_MINIONS,
         Action.PLAY_CHARACTER_EVENT,
     ),
+    DieResult.ARMY: (
+        Action.SKIP,
+        Action.MOVE_ARMIES,
+        Action.ATTACK,
+        Action.PLAY_ARMY_EVENT,
+    ),
     DieResult.MUSTER: (
         Action.SKIP,
         Action.DIPLOMACY,
@@ -179,11 +177,25 @@ ACTIONS = {
         Action.MUSTER_MOUTH_OF_SAURON,
         Action.PLAY_MUSTER_EVENT,
     ),
-    DieResult.ARMY: (
+    DieResult.HYBRID: (
         Action.SKIP,
         Action.MOVE_ARMIES,
         Action.ATTACK,
         Action.PLAY_ARMY_EVENT,
+        Action.DIPLOMACY,
+        Action.MUSTER_UNITS,
+        Action.MUSTER_SARUMAN,
+        Action.MUSTER_WITCH_KING,
+        Action.MUSTER_MOUTH_OF_SAURON,
+        Action.PLAY_MUSTER_EVENT,
+    ),
+    DieResult.PALANTIR: (
+        Action.SKIP,
+        Action.DRAW_CHARACTER_EVENT,
+        Action.DRAW_STRATEGY_EVENT,
+        Action.PLAY_CHARACTER_EVENT,
+        Action.PLAY_ARMY_EVENT,
+        Action.PLAY_MUSTER_EVENT,
     ),
     DieResult.WILL: (Action.SKIP, Action.MUSTER_GANDALF, Action.MUSTER_ARAGORN),
 }
