@@ -1,6 +1,12 @@
 from typing import Iterable, Optional
 
-from war_of_the_ring_ai.activities import discard, draw
+from war_of_the_ring_ai.activities import (
+    discard,
+    draw,
+    get_army,
+    is_under_siege,
+    unit_can_enter,
+)
 from war_of_the_ring_ai.constants import (
     GANDALF_LOCATION,
     MAX_HAND_SIZE,
@@ -15,7 +21,7 @@ from war_of_the_ring_ai.constants import (
     Victory,
 )
 from war_of_the_ring_ai.context import GameContext
-from war_of_the_ring_ai.game_objects import CASUALTIES
+from war_of_the_ring_ai.game_objects import CASUALTIES, Region
 
 
 def do_action(action: Action, context: GameContext) -> Optional[Victory]:
@@ -152,7 +158,28 @@ def muster_mouth_of_sauron_flow(context: GameContext) -> None:
 
 
 def move_armies_flow(context: GameContext) -> None:
-    raise NotImplementedError()
+    player = context.active_player
+    side = player.public.side
+    agent = context.active_agent
+
+    start_regions: list[Region] = []
+
+    for region in context.game.regions.all_regions():
+        army = get_army(region, side, context.game)
+        if army.is_combat_army and not is_under_siege(region, side, context.game):
+            start_regions.append(region)
+
+    start_region = agent.ask("ChooseArmyMoveStart", start_regions)
+    army = get_army(start_region, side, context.game)
+    end_regions: list[Region] = []
+
+    for neighbor in context.game.regions.neighbors(start_region):
+        if any(unit_can_enter(unit, neighbor, context.game) for unit in army.units):
+            end_regions.append(neighbor)
+
+    end_region = agent.ask("ChooseArmyMoveEnd", end_regions)
+    print(end_region)
+    # TODO WIP
 
 
 def leader_move_flow(context: GameContext) -> None:
