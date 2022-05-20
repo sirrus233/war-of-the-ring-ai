@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator, Optional, Sequence
+from typing import Iterator, Optional
 
 from war_of_the_ring_ai.constants import (
     EYE_CORRUPTION_FLAG,
@@ -94,7 +94,7 @@ MORDOR = Region("Mordor")
 
 @dataclass(frozen=True)
 class CharacterCollection:
-    characters: Sequence[Character]
+    characters: list[Character]
 
     def __iter__(self) -> Iterator[Character]:
         return iter(self.characters)
@@ -129,7 +129,7 @@ class CharacterCollection:
 
 @dataclass(frozen=True)
 class RegionCollection:
-    regions: Sequence[Region]
+    regions: list[Region]
 
     def __iter__(self) -> Iterator[Region]:
         return iter(self.regions)
@@ -157,7 +157,7 @@ class RegionCollection:
 
 @dataclass(frozen=True)
 class ArmyUnitCollection:
-    units: Sequence[ArmyUnit]
+    units: list[ArmyUnit]
 
     def __iter__(self) -> Iterator[ArmyUnit]:
         return iter(self.units)

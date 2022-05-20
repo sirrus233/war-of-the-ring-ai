@@ -47,7 +47,7 @@ class RegionMap:
         return self._regions_by_name[name]
 
     def all_regions(self) -> RegionCollection:
-        return RegionCollection(self._regions.keys())
+        return RegionCollection(list(self._regions.keys()))
 
     def neighbors(self, region: Region) -> list[Region]:
         return self._regions[region]

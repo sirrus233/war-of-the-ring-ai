@@ -1,4 +1,6 @@
-from typing import Iterable, Optional
+from collections import defaultdict
+from itertools import product
+from typing import DefaultDict, Iterable, Optional
 
 from war_of_the_ring_ai.activities import (
     discard,
@@ -18,6 +20,7 @@ from war_of_the_ring_ai.constants import (
     Nation,
     Settlement,
     Side,
+    UnitRank,
     Victory,
 )
 from war_of_the_ring_ai.context import GameContext
@@ -163,23 +166,29 @@ def move_armies_flow(context: GameContext) -> None:
     agent = context.active_agent
 
     start_regions: list[Region] = []
-
     for region in context.game.regions.all_regions():
         army = get_army(region, side, context.game)
         if army.is_combat_army and not is_under_siege(region, side, context.game):
             start_regions.append(region)
+    start_region = agent.ask("ArmyMoveStart", start_regions)
 
-    start_region = agent.ask("ChooseArmyMoveStart", start_regions)
-    army = get_army(start_region, side, context.game)
     end_regions: list[Region] = []
-
+    army = get_army(start_region, side, context.game)
     for neighbor in context.game.regions.neighbors(start_region):
         if any(unit_can_enter(unit, neighbor, context.game) for unit in army.units):
             end_regions.append(neighbor)
+    end_region = agent.ask("ArmyMoveEnd", end_regions)
 
-    end_region = agent.ask("ChooseArmyMoveEnd", end_regions)
-    print(end_region)
-    # TODO WIP
+    counts: DefaultDict[tuple[Nation, UnitRank], int] = defaultdict(int)
+    for unit in army.units.units + army.leaders.units:
+        counts[(unit.nation, unit.rank)] += 1
+
+    category_options = [
+        [(category[0], category[1], i) for i in range(count + 1)]
+        for category, count in counts.items()
+    ]
+    options = list(product(*category_options))
+    agent.ask("ArmyMoveSelection", options)
 
 
 def leader_move_flow(context: GameContext) -> None:
