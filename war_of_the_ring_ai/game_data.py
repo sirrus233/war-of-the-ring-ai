@@ -162,7 +162,7 @@ class PlayerData:
 
 @dataclass
 class GameData:  # pylint: disable=too-many-instance-attributes
-    def __init__(self, free: PublicPlayerData, shadow: PublicPlayerData) -> None:
+    def __init__(self) -> None:
         self.turn: int = 0
         self.regions: RegionMap = init_region_map()
         self.conquered: set[Region] = set()
@@ -177,10 +177,6 @@ class GameData:  # pylint: disable=too-many-instance-attributes
             self.characters.with_id(INITIAL_GUIDE_ID),
             self.regions.get_region(FELLOWSHIP_START),
         )
-        self.players: Mapping[Side, PublicPlayerData] = {
-            Side.FREE: free,
-            Side.SHADOW: shadow,
-        }
         self._active_side: Side = Side.FREE
 
     @property

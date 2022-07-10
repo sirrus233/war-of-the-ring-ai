@@ -16,8 +16,25 @@ from war_of_the_ring_ai.constants import (
 )
 
 
+@dataclass(frozen=True)
+class Region:
+    name: str
+    nation: Optional[Nation] = None
+    settlement: Optional[Settlement] = None
+    is_fortification: bool = False
+
+    def __repr__(self) -> str:
+        return self.name
+
+
+FELLOWSHIP = Region("Fellowship")
+REINFORCEMENTS = Region("Reinforcements")
+CASUALTIES = Region("Casualties")
+MORDOR = Region("Mordor")
+
+
 @dataclass
-class Placeable:
+class Figure:
     location: Region
 
     @property
@@ -26,7 +43,7 @@ class Placeable:
 
 
 @dataclass
-class ArmyUnit(Placeable):
+class ArmyUnit(Figure):
     rank: UnitRank
     nation: Nation
 
@@ -44,7 +61,7 @@ class ArmyUnit(Placeable):
 
 
 @dataclass
-class Character(Placeable):
+class Character(Figure):
     id: CharacterID
     side: Side
     level: int
@@ -73,23 +90,6 @@ class Army:
         unit_leadership = sum(1 for _ in self.leaders)
         char_leadership = sum(character.leadership for character in self.characters)
         return unit_leadership + char_leadership
-
-
-@dataclass(frozen=True)
-class Region:
-    name: str
-    nation: Optional[Nation] = None
-    settlement: Optional[Settlement] = None
-    is_fortification: bool = False
-
-    def __repr__(self) -> str:
-        return self.name
-
-
-FELLOWSHIP = Region("Fellowship")
-REINFORCEMENTS = Region("Reinforcements")
-CASUALTIES = Region("Casualties")
-MORDOR = Region("Mordor")
 
 
 @dataclass(frozen=True)

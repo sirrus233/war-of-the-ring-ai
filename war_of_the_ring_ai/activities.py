@@ -4,6 +4,7 @@ from typing import Iterable, Sequence
 from war_of_the_ring_ai.constants import (
     ACTION_DIE,
     HEROES,
+    MAX_HAND_SIZE,
     NATIONS,
     CardType,
     DeckType,
@@ -21,6 +22,10 @@ from war_of_the_ring_ai.game_objects import (
     Character,
     Region,
 )
+
+
+def is_hand_size_legal(player: PlayerData) -> bool:
+    return len(player.private.hand) <= MAX_HAND_SIZE
 
 
 def draw(player: PlayerData, deck: DeckType) -> None:
