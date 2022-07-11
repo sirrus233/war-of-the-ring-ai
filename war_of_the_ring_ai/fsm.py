@@ -5,11 +5,20 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any, Generic, Optional, Sequence, Type, TypeAlias, TypeVar
 
-from war_of_the_ring_ai.activities import discard, draw, is_hand_size_legal
+from war_of_the_ring_ai.activities import (
+    discard,
+    draw,
+    fellowship_can_heal,
+    is_hand_size_legal,
+    maximum_hunt_dice,
+    minimum_hunt_dice,
+    valid_guides,
+)
 from war_of_the_ring_ai.constants import (
+    FREE_VP_GOAL,
     MAX_HAND_SIZE,
     MORDOR_ENTRANCES,
-    CharacterID,
+    SHADOW_VP_GOAL,
     DeckType,
     Side,
 )
@@ -39,6 +48,9 @@ class State(Enum):
     FELLOWSHIP_PHASE_MORDOR = auto()
     FELLOWSHIP_PHASE_GUIDE = auto()
     DETERMINE_FELLOWSHIP = auto()
+    ALLOCATE_EYES = auto()
+    VICTORY_PHASE = auto()
+    GAME_OVER = auto()
 
 
 class Event(Enum):
@@ -49,6 +61,7 @@ class Event(Enum):
     DECLARE_FELLOWSHIP = auto()
     ENTER_MORDOR = auto()
     CHANGE_GUIDE = auto()
+    ALLOCATE_EYES = auto()
 
 
 class EventConfig(Generic[S, E, C, P], ABC):
@@ -82,10 +95,15 @@ class StateConfig(Generic[S, E, C], ABC):
     def add_event(self, event: EventConfig[S, E, C, Any]) -> None:
         self.transitions[event.event] = event
 
+    def valid_transitions(self) -> Sequence[E]:
+        return [event for event in self.transitions if self.transitions[event].guard()]
+
     def handle(self, event: E, payload: Any) -> Optional[S]:
-        if event in self.transitions and payload in self.transitions[event].payloads():
-            if self.transitions[event].guard():
-                return self.transitions[event].handle(payload)
+        if (
+            event in self.valid_transitions()
+            and payload in self.transitions[event].payloads()
+        ):
+            return self.transitions[event].handle(payload)
 
 
 WOTRStateConfig: TypeAlias = StateConfig[State, Event, GameContext]
@@ -110,7 +128,6 @@ class DrawPhase(WOTRStateConfig):
                 is_hand_size_legal(player) for player in self.context.players.values()
             ):
                 return State.FELLOWSHIP_PHASE_DECLARE
-            return None
 
     def __init__(self, state: State, context: GameContext) -> None:
         super().__init__(state, context)
@@ -127,8 +144,6 @@ class DrawPhase(WOTRStateConfig):
         if all(is_hand_size_legal(player) for player in self.context.players.values()):
             return State.FELLOWSHIP_PHASE_DECLARE
 
-        return None
-
 
 class FellowshipPhaseDeclare(WOTRStateConfig):
     class DeclareFellowship(WOTREventConfig[None]):
@@ -138,8 +153,22 @@ class FellowshipPhaseDeclare(WOTRStateConfig):
         def handle(self, payload: None) -> Optional[State]:
             return State.DETERMINE_FELLOWSHIP
 
+    def on_enter(self) -> Optional[State]:
+        if Event.DECLARE_FELLOWSHIP not in self.valid_transitions():
+            return State.FELLOWSHIP_PHASE_MORDOR
+
+    def on_exit(self) -> Optional[State]:
+        if fellowship_can_heal(self.context.game):
+            corruption = self.context.game.fellowship.corruption
+            self.context.game.fellowship.corruption = max(0, corruption - 1)
+
     def __init__(self, state: State, context: GameContext) -> None:
         super().__init__(state, context)
+        self.add_event(
+            FellowshipPhaseDeclare.DeclareFellowship(
+                Event.DECLARE_FELLOWSHIP, self.context
+            )
+        )
 
 
 class FellowshipPhaseMordor(WOTRStateConfig):
@@ -150,13 +179,63 @@ class FellowshipPhaseMordor(WOTRStateConfig):
         def handle(self, payload: None) -> Optional[State]:
             self.context.game.fellowship.location = MORDOR
             self.context.game.fellowship.progress = 0
-            return None
+
+    def on_enter(self) -> Optional[State]:
+        if Event.ENTER_MORDOR not in self.valid_transitions():
+            return State.FELLOWSHIP_PHASE_GUIDE
+
+    def __init__(self, state: State, context: GameContext) -> None:
+        super().__init__(state, context)
+        self.add_event(
+            FellowshipPhaseMordor.EnterMordor(Event.ENTER_MORDOR, self.context)
+        )
+
+
+class FellowshipPhaseGuide(WOTRStateConfig):
+    class ChangeGuide(WOTREventConfig[Character]):
+        def payloads(self) -> Sequence[Character]:
+            return valid_guides(self.context.game)
+
+        def handle(self, payload: Character) -> Optional[State]:
+            self.context.game.fellowship.guide = payload
+            return State.ALLOCATE_EYES
+
+    def __init__(self, state: State, context: GameContext) -> None:
+        super().__init__(state, context)
+        self.add_event(
+            FellowshipPhaseGuide.ChangeGuide(Event.CHANGE_GUIDE, self.context)
+        )
+
+
+class AllocateEyes(WOTRStateConfig):
+    class AllocateEyes(WOTREventConfig[int]):
+        def payloads(self) -> Sequence[int]:
+            game = self.context.game
+            return list(range(minimum_hunt_dice(game), maximum_hunt_dice(game) + 1))
+
+        def handle(self, payload: int) -> Optional[State]:
+            self.context.game.hunt_box.eyes = payload
+            return State.VICTORY_PHASE
+
+    def __init__(self, state: State, context: GameContext) -> None:
+        super().__init__(state, context)
+        self.add_event(AllocateEyes.AllocateEyes(Event.ALLOCATE_EYES, self.context))
+
+
+class VictoryPhase(WOTRStateConfig):
+    def on_enter(self) -> Optional[State]:
+        if self.context.players[Side.SHADOW].public.victory_points >= SHADOW_VP_GOAL:
+            return State.GAME_OVER
+        if self.context.players[Side.FREE].public.victory_points >= FREE_VP_GOAL:
+            return State.GAME_OVER
+        return State.DRAW_PHASE
 
     def __init__(self, state: State, context: GameContext) -> None:
         super().__init__(state, context)
 
 
-"""
+###################################################################################
+
 context = GameContext(
     GameData(),
     {
@@ -171,26 +250,25 @@ context = GameContext(
     },
 )
 
-class StateMachine:
-    def __init__(self, initial_state: Type[State]) -> None:
-        self._game = GameData()
-        self._players = {
-            Side.FREE: PlayerData(
-                public=init_public_player_data(Side.FREE),
-                private=init_private_player_data(Side.FREE),
-            ),
-            Side.SHADOW: PlayerData(
-                public=init_public_player_data(Side.SHADOW),
-                private=init_private_player_data(Side.SHADOW),
-            ),
-        }
-        self.current_state = initial_state(self, self._game, self._players)
 
-    def transition(self, next_state: Type[State]) -> None:
+class StateMachine(Generic[S, E, C]):
+    def __init__(self, initial_state: S, final_states: Sequence[S], context: C) -> None:
+        self.states: dict[S, StateConfig[S, E, C]] = {}
+        self.current_state = None
+        self.final_states = final_states
+        self.context = context
+
+    def add_state(self, state: S, config: StateConfig[S, E, C]) -> None:
+        self.states[state] = config
+
+    def transition(self, next_state: S) -> None:
         self.current_state.on_exit()
         self.current_state = next_state(self, self._game, self._players)
         self.current_state.on_enter()
 
     def start(self) -> None:
+        if self.current_state is None:
+
+        while self.current_state not in self.final_states:
+
         self.current_state.on_enter()
-"""
