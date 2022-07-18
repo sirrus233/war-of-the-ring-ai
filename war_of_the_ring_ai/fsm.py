@@ -2,16 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import (
-    Callable,
-    Generic,
-    Optional,
-    Protocol,
-    Sequence,
-    Type,
-    TypeAlias,
-    TypeVar,
-)
+from typing import Callable, Generic, Optional, Protocol, Sequence, TypeAlias, TypeVar
 
 from war_of_the_ring_ai.activities import discard, draw, is_hand_size_legal
 from war_of_the_ring_ai.constants import DeckType, Side
@@ -164,11 +155,13 @@ sm.add_state(
                 ".",
                 guard=can_discard,
                 action=do_discard,
+                internal=True,
             ),
             "ALTR_DISCARD": Transition(
                 ".",
                 guard=altr_can_discard,
                 action=altr_do_discard,
+                internal=True,
             ),
         },
     ),
