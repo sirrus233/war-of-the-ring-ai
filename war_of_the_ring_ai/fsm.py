@@ -26,35 +26,38 @@ from war_of_the_ring_ai.game_objects import Card
 StateId: TypeAlias = Enum | str
 EventId: TypeAlias = str
 
+C = TypeVar("C")
+E = TypeVar("E", bound="Event")
+
 
 class Event(Protocol):
     event: EventId
 
 
-C = TypeVar("C")
-E = TypeVar("E", bound=Event)
-
-
-@dataclass
-class EventlessTransition(Generic[C]):
+@dataclass(frozen=True, kw_only=True)
+class Transition(Generic[C]):
     target: StateId
-    guard: Optional[Callable[[C], bool]] = None
-    action: Optional[Callable[[C], None]] = None
     internal: bool = False
 
 
-@dataclass
-class Transition(Generic[C, E]):
+@dataclass(frozen=True, kw_only=True)
+class EventlessTransition(Generic[C], Transition[C]):
+    guard: Callable[[C], bool] = lambda ctx: True
+    action: Callable[[C], None] = lambda ctx: None
+
+
+@dataclass(frozen=True, kw_only=True)
+class EventTransition(Generic[C, E], Transition[C]):
     event: Type[E]
-    target: StateId
-    guard: Optional[Callable[[C, E], bool]] = None
-    action: Optional[Callable[[C, E], None]] = None
-    internal: bool = False
+    guard: Callable[[C, E], bool] = lambda ctx, event: True
+    action: Callable[[C, E], None] = lambda ctx, event: None
 
 
-@dataclass
+@dataclass(frozen=True)
 class State(Generic[C, E]):
-    on: dict[EventId, StateId | Transition[C, E]] = field(default_factory=dict)
+    on: list[EventTransition[C, E] | EventlessTransition[C]] = field(
+        default_factory=list
+    )
     entry: list[Callable[[C], None]] = field(default_factory=list)
     exit: list[Callable[[C], None]] = field(default_factory=list)
     always: list[EventlessTransition[C]] = field(default_factory=list)
@@ -67,13 +70,32 @@ class StateMachine(Generic[C, E]):
         initial_state: StateId,
         final_states: Optional[Sequence[StateId]] = None,
     ) -> None:
-        self.context = context
-        self.current_state = initial_state
-        self.final_states = final_states
-        self.states: dict[StateId, State[C, E]] = {}
+        if final_states is None:
+            final_states = []
+
+        self._context = context
+        self._current_state = self._normalize_state_id(initial_state)
+        self._final_states = [self._normalize_state_id(state) for state in final_states]
+        self._states: dict[str, State[C, E]] = {}
+
+    def _normalize_state_id(self, state_id: StateId) -> str:
+        return state_id if isinstance(state_id, str) else state_id.name
+
+    def _normalize_event_id(self, event_id: EventId) -> str:
+        return event_id
 
     def add_state(self, stateId: StateId, state: State[C, E]) -> None:
-        self.states[stateId] = state
+        self._states[self._normalize_state_id(stateId)] = state
+
+    def add_states(self, states: dict[StateId, State[C, E]]) -> None:
+        for state_id, state in states.items():
+            self.add_state(state_id, state)
+
+    def start(self) -> None:
+        if self._current_state not in self._states:
+            raise RuntimeError(
+                f"No configuration for initial state: {self._current_state}."
+            )
 
     def handle(self, event: E) -> None:
         try:
@@ -173,22 +195,22 @@ sm.add_state(
                 target=WOTRState.FELLOWSHIP_PHASE, guard=valid_hand_sizes
             )
         ],
-        on={
-            "ALTR_DISCARD": Transition(
-                Discard,
-                ".",
+        on=[
+            EventTransition(
+                event=Discard,
+                target=".",
                 guard=can_discard,
                 action=do_discard,
                 internal=True,
             ),
-            "DISCARD": Transition(
-                AltrDiscard,
-                ".",
+            EventTransition(
+                event=AltrDiscard,
+                target=".",
                 guard=altr_can_discard,
                 action=altr_do_discard,
                 internal=True,
             ),
-        },
+        ],
     ),
 )
 
