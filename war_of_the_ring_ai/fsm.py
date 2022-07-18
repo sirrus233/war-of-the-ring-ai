@@ -55,9 +55,7 @@ class EventTransition(Generic[C, E], Transition[C]):
 
 @dataclass(frozen=True)
 class State(Generic[C, E]):
-    on: list[EventTransition[C, E] | EventlessTransition[C]] = field(
-        default_factory=list
-    )
+    on: list[EventTransition[C, E]] = field(default_factory=list)
     entry: list[Callable[[C], None]] = field(default_factory=list)
     exit: list[Callable[[C], None]] = field(default_factory=list)
     always: list[EventlessTransition[C]] = field(default_factory=list)
