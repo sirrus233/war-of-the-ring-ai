@@ -1,9 +1,17 @@
 from __future__ import annotations
 
-from abc import ABC
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Generic, Optional, Sequence, TypeAlias, TypeVar
+from typing import (
+    Callable,
+    Generic,
+    Optional,
+    Protocol,
+    Sequence,
+    Type,
+    TypeAlias,
+    TypeVar,
+)
 
 from war_of_the_ring_ai.activities import discard, draw, is_hand_size_legal
 from war_of_the_ring_ai.constants import DeckType, Side
@@ -16,10 +24,10 @@ from war_of_the_ring_ai.game_data import (
 from war_of_the_ring_ai.game_objects import Card
 
 StateId: TypeAlias = Enum | str
-EventId: TypeAlias = Enum | str
+EventId: TypeAlias = str
 
 
-class Event(ABC):
+class Event(Protocol):
     event: EventId
 
 
@@ -36,24 +44,22 @@ class EventlessTransition(Generic[C]):
 
 
 @dataclass
-class Transition(Generic[C]):
-    event: EventId
+class Transition(Generic[C, E]):
     target: StateId
-    guard: Optional[Callable[[C, Event], bool]] = None
-    action: Optional[Callable[[C, Event], None]] = None
+    guard: Optional[Callable[[C, E], bool]] = None
+    action: Optional[Callable[[C, E], None]] = None
     internal: bool = False
 
 
 @dataclass
-class State(Generic[C]):
-    state: StateId
-    on: list[tuple[Event, StateId] | Transition[C]] = field(default_factory=list)
+class State(Generic[C, E]):
+    on: dict[EventId, StateId | Transition[C, E]] = field(default_factory=dict)
     entry: list[Callable[[C], None]] = field(default_factory=list)
     exit: list[Callable[[C], None]] = field(default_factory=list)
     always: list[EventlessTransition[C]] = field(default_factory=list)
 
 
-class StateMachine(Generic[C]):
+class StateMachine(Generic[C, E]):
     def __init__(
         self,
         context: C,
@@ -63,10 +69,10 @@ class StateMachine(Generic[C]):
         self.context = context
         self.current_state = initial_state
         self.final_states = final_states
-        self.states: dict[StateId, State[C]] = {}
+        self.states: dict[StateId, State[C, E]] = {}
 
-    def add_state(self, state: State[C]) -> None:
-        self.states[state.state] = state
+    def add_state(self, stateId: StateId, state: State[C, E]) -> None:
+        self.states[stateId] = state
 
 
 ########
@@ -98,12 +104,24 @@ class WOTRState(Enum):
     FELLOWSHIP_PHASE = 2
 
 
-class WOTREvent(Enum):
-    FREE_DISCARD = 1
-    SHADOW_DISCARD = 2
+@dataclass
+class Discard(Event):
+    side: Side
+    card: Card
+    event: EventId = "DISCARD"
 
 
-sm = StateMachine(wotr_context, "ab")
+@dataclass
+class AltrDiscard(Event):
+    side: Side
+    card: Card
+    event: EventId = "ALTR_DISCARD"
+
+
+events = [Discard, AltrDiscard]
+TEvents = TypeVar("TEvents", Discard, AltrDiscard)
+
+sm = StateMachine[GameContext, TEvents](wotr_context, "ab")
 
 
 def both_players_draw(ctx: GameContext) -> None:
@@ -116,52 +134,44 @@ def valid_hand_sizes(ctx: GameContext) -> bool:
     return all(is_hand_size_legal(player) for player in ctx.players.values())
 
 
-def can_discard(ctx: GameContext, event: Event) -> bool:
-    if isinstance(event, Discard):
-        return event.card in ctx.players[event.side].private.hand
-    return False
+def can_discard(ctx: GameContext, event: Discard) -> bool:
+    return event.card in ctx.players[event.side].private.hand
 
 
-def do_discard(ctx: GameContext, event: Event) -> None:
-    if isinstance(event, Discard):
-        discard(ctx.players[event.side], event.card)
+def do_discard(ctx: GameContext, event: Discard) -> None:
+    discard(ctx.players[event.side], event.card)
 
 
-class Discard(Event, ABC):
-    def __init__(self, event: EventId, side: Side, card: Card) -> None:
-        self.event = event
-        self.side = side
-        self.card = card
+def altr_can_discard(ctx: GameContext, event: AltrDiscard) -> bool:
+    return event.card in ctx.players[event.side].private.hand
 
 
-class FreeDiscard(Discard):
-    def __init__(self, card: Card) -> None:
-        super().__init__(WOTREvent.FREE_DISCARD, Side.FREE, card)
-
-
-class ShadowDiscard(Discard):
-    def __init__(self, card: Card) -> None:
-        super().__init__(WOTREvent.SHADOW_DISCARD, Side.SHADOW, card)
+def altr_do_discard(ctx: GameContext, event: AltrDiscard) -> None:
+    discard(ctx.players[event.side], event.card)
 
 
 sm.add_state(
+    WOTRState.DRAW_PHASE,
     State(
-        WOTRState.DRAW_PHASE,
         entry=[both_players_draw],
         always=[
             EventlessTransition(
                 target=WOTRState.FELLOWSHIP_PHASE, guard=valid_hand_sizes
             )
         ],
-        on=[
-            Transition(
-                WOTREvent.FREE_DISCARD, ".", guard=can_discard, action=do_discard
+        on={
+            "DISCARD": Transition(
+                ".",
+                guard=can_discard,
+                action=do_discard,
             ),
-            Transition(
-                WOTREvent.SHADOW_DISCARD, ".", guard=can_discard, action=do_discard
+            "ALTR_DISCARD": Transition(
+                ".",
+                guard=altr_can_discard,
+                action=altr_do_discard,
             ),
-        ],
-    )
+        },
+    ),
 )
 
 
