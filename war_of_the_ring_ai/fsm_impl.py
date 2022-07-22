@@ -3,9 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Optional, Sequence, TypeAlias, TypeVar
-
-from fsm import Event, EventlessTransition, State, StateMachine, Transition
+from typing import Callable, Optional, Sequence, TypeAlias, TypeVar
 
 from war_of_the_ring_ai.activities import (
     discard,
@@ -23,6 +21,13 @@ from war_of_the_ring_ai.constants import (
     SHADOW_VP_GOAL,
     DeckType,
     Side,
+)
+from war_of_the_ring_ai.fsm import (
+    Event,
+    EventlessTransition,
+    State,
+    StateMachine,
+    Transition,
 )
 from war_of_the_ring_ai.game_data import (
     GameData,
@@ -205,6 +210,14 @@ context = GameContext(
     },
 )
 
+C = TypeVar("C")
+E = TypeVar("E", bound="Event")
+
+
+@dataclass(frozen=True)
+class AIState(State[C, E]):
+    valid_events: Callable[[C], Sequence[E]] = lambda _: []
+
 
 @dataclass
 class Confirm(Event):
@@ -254,14 +267,20 @@ def do_discard(ctx: GameContext, event: Discard) -> None:
     discard(ctx.players[event.side], event.card)
 
 
+def valid_discards(ctx: GameContext) -> Sequence[Discard]:
+    player = ctx.players[Side.SHADOW]
+    return [Discard(Side.SHADOW, card) for card in player.private.hand]
+
+
 sm.add_state(
     WOTRState.DRAW_PHASE,
-    State(
+    AIState(
         entry=[both_players_draw, print_hands],
         always=[
             EventlessTransition(target=WOTRState.DRAW_PHASE, guard=valid_hand_sizes)
         ],
         on=[Transition(event=Discard, guard=can_discard, action=do_discard)],
+        valid_events=valid_discards,
     ),
 )
 
@@ -271,3 +290,6 @@ sm.send(Discard(Side.FREE, context.players[Side.FREE].private.hand[0]))
 sm.send(Discard(Side.FREE, context.players[Side.FREE].private.hand[0]))
 sm.send(Discard(Side.SHADOW, context.players[Side.SHADOW].private.hand[0]))
 sm.send(Discard(Side.SHADOW, context.players[Side.SHADOW].private.hand[0]))
+
+if isinstance(sm.current_state, AIState):
+    print(sm.current_state.valid_events(context))
