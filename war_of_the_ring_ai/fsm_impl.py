@@ -246,7 +246,8 @@ def valid_hand_sizes(ctx: GameContext) -> bool:
 
 
 def can_discard(ctx: GameContext, event: Discard) -> bool:
-    return event.card in ctx.players[event.side].private.hand
+    player = ctx.players[event.side]
+    return not is_hand_size_legal(player) and event.card in player.private.hand
 
 
 def do_discard(ctx: GameContext, event: Discard) -> None:
@@ -265,6 +266,7 @@ sm.add_state(
 )
 
 sm.start()
+sm.send(Discard(Side.FREE, context.players[Side.FREE].private.hand[0]))
 sm.send(Discard(Side.FREE, context.players[Side.FREE].private.hand[0]))
 sm.send(Discard(Side.FREE, context.players[Side.FREE].private.hand[0]))
 sm.send(Discard(Side.SHADOW, context.players[Side.SHADOW].private.hand[0]))
