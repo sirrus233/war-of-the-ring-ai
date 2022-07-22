@@ -32,7 +32,7 @@ disable = [
 ]
 
 [tool.pylint.basic]
-good-names = ["i", "x", "id"]
+good-names = ["i", "x", "id", "e", "on"]
 [tool.pylint.miscellaneous]
 ignore-imports = "yes"
 notes = [

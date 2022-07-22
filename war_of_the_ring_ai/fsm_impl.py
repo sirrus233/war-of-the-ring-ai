@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Optional, Sequence, TypeAlias, TypeVar
 
-from fsm import Event, State
+from fsm import Event, EventlessTransition, State, StateMachine, Transition
 
 from war_of_the_ring_ai.activities import (
     discard,
@@ -32,10 +32,8 @@ from war_of_the_ring_ai.game_data import (
 )
 from war_of_the_ring_ai.game_objects import MORDOR, Card, Character
 
-T = TypeVar("T")
 
-
-class StateId(Enum):
+class WOTRState(Enum):
     DRAW_PHASE = auto()
     FELLOWSHIP_PHASE_DECLARE = auto()
     FELLOWSHIP_PHASE_MORDOR = auto()
@@ -63,10 +61,7 @@ class GameContext:
     players: dict[Side, PlayerData]
 
 
-WOTRState: TypeAlias = State[StateId, EventId, GameContext]
-WOTREvent: TypeAlias = Event[StateId, EventId, GameContext, T]
-
-
+"""
 class DrawPhase(WOTRState):
     class Discard(WOTREvent[Card], ABC):
         def __init__(self, context: GameContext) -> None:
@@ -189,10 +184,11 @@ class VictoryPhase(WOTRState):
             return StateId.GAME_OVER
         if self.context.players[Side.FREE].public.victory_points >= FREE_VP_GOAL:
             return StateId.GAME_OVER
-        return StateId.DRAW_PHASE
+        return StateId.FREEDRAW_PHASE
 
     def __init__(self, state: StateId, context: GameContext) -> None:
         super().__init__(state, context)
+"""
 
 
 context = GameContext(
@@ -209,4 +205,67 @@ context = GameContext(
     },
 )
 
-d = DrawPhase(StateId.ALLOCATE_EYES, context)
+
+@dataclass
+class Confirm(Event):
+    ...
+
+
+@dataclass
+class Undo(Event):
+    ...
+
+
+@dataclass
+class Discard(Event):
+    side: Side
+    card: Card
+
+
+TEvents = TypeVar("TEvents", Confirm, Undo, Discard)
+
+sm = StateMachine[GameContext, TEvents](context, WOTRState.DRAW_PHASE)
+
+
+def both_players_draw(ctx: GameContext) -> None:
+    for player in ctx.players.values():
+        draw(player, DeckType.CHARACTER)
+        draw(player, DeckType.STRATEGY)
+
+
+def print_hands(ctx: GameContext) -> None:
+    for player in ctx.players.values():
+        print(f"***{player.public.side}***")
+        for card in player.private.hand:
+            print(card)
+    print("--------")
+
+
+def valid_hand_sizes(ctx: GameContext) -> bool:
+    return all(is_hand_size_legal(player) for player in ctx.players.values())
+
+
+def can_discard(ctx: GameContext, event: Discard) -> bool:
+    return event.card in ctx.players[event.side].private.hand
+
+
+def do_discard(ctx: GameContext, event: Discard) -> None:
+    discard(ctx.players[event.side], event.card)
+
+
+sm.add_state(
+    WOTRState.DRAW_PHASE,
+    State(
+        entry=[both_players_draw, print_hands],
+        always=[
+            EventlessTransition(target=WOTRState.DRAW_PHASE, guard=valid_hand_sizes)
+        ],
+        on=[Transition(event=Discard, guard=can_discard, action=do_discard)],
+    ),
+)
+
+sm.start()
+sm.send(Discard(Side.FREE, context.players[Side.FREE].private.hand[0]))
+sm.send(Discard(Side.FREE, context.players[Side.FREE].private.hand[0]))
+sm.send(Discard(Side.SHADOW, context.players[Side.SHADOW].private.hand[0]))
+sm.send(Discard(Side.SHADOW, context.players[Side.SHADOW].private.hand[0]))
